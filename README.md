@@ -49,25 +49,25 @@
 
 支出 / 收入 / 账户总额三卡（年月日联动）、可拖拽排序的账户余额、单击即改的最近记录：
 
-![概览](https://cdn.jsdelivr.net/gh/Frostleaf0929/BillTrace@main/docs/screenshots/overview.png)
+![概览](https://cdn.jsdelivr.net/gh/Frostleaf0929/BillTrace@main/docs/screenshots/overview.jpg)
 
 ### 分类
 
 三级分类体系（一级 → 二级 → 小级），拖拽移动、点击行展开、md/txt 预设导入：
 
-![分类](https://cdn.jsdelivr.net/gh/Frostleaf0929/BillTrace@main/docs/screenshots/categories.png)
+![分类](https://cdn.jsdelivr.net/gh/Frostleaf0929/BillTrace@main/docs/screenshots/categories.jpg)
 
 ### 详细 · 新商家归类
 
 导入时遇到新商家弹窗归类，确认后自动沉淀为规则：
 
-![详细](https://cdn.jsdelivr.net/gh/Frostleaf0929/BillTrace@main/docs/screenshots/detail-pending.png)
+![详细](https://cdn.jsdelivr.net/gh/Frostleaf0929/BillTrace@main/docs/screenshots/detail-pending.jpg)
 
 ### 设置 · 个性化
 
 背景图 + 毛玻璃强度 + 颜色方案，全部实时生效：
 
-![设置](https://cdn.jsdelivr.net/gh/Frostleaf0929/BillTrace@main/docs/screenshots/settings.png)
+![设置](https://cdn.jsdelivr.net/gh/Frostleaf0929/BillTrace@main/docs/screenshots/settings.jpg)
 
 ## 开发
 
