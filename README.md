@@ -19,14 +19,30 @@
 
 ---
 
-## 这是什么
+## 📥 下载使用（普通用户看这里，无需编译）
 
-**账痕**是一款 Windows 桌面端绿色单文件记账应用（约 8MB，双击即用，无需安装）。
-把你的年度账本 Excel、微信支付流水直接拖进来，它会按照你自定义的**分类体系与商家规则**自动归类、自动查重，并用毛玻璃质感的界面帮你把每一笔钱的"痕迹"看清楚。
+**账痕**是一款 Windows 桌面端绿色单文件记账应用：把年度账本 Excel、微信支付流水直接导入，它会按你自定义的**分类体系与商家规则**自动归类、自动查重。数据 100% 本地存储（SQLite），整个目录拷到 U 盘即完成备份迁移。
 
-- 数据 100% 本地存储（SQLite），不上传任何服务器；
-- 整个程序目录拷到 U 盘即可带走，数据随目录迁移；
-- 支持从 Markdown / txt 导入你自己的分类体系预设。
+**推荐方式：直接下载 Release 里的成品 exe，双击即用，不需要安装任何开发环境。**
+
+> 👉 **[前往 Releases 页面下载最新版 →](https://github.com/Frostleaf0929/BillTrace/releases)**
+> ⚠️ 认准本仓库地址 `Frostleaf0929/BillTrace`——GitHub 上另有拼写近似的他人项目（如 BillTra**k**），注意区分。
+
+**使用环境（就这三条）：**
+
+| 要求 | 说明 |
+|------|------|
+| Windows 10 / 11（64 位） | 仅支持 Windows 桌面端 |
+| WebView2 运行时 | Win10/11 系统自带；若极少数机器启动报错，去 [微软官网](https://developer.microsoft.com/microsoft-edge/webview2/) 装一次即可 |
+| 磁盘空间 | 程序约 8MB，账本数据若干 MB |
+
+**三步上手：**
+
+1. 从 Releases 下载 `BillTrace_v0.2.0_x64.exe`，放到一个**单独的文件夹**里（比如 `D:\BillTrace\`）；
+2. 双击运行——它会在同目录生成 `data\` 文件夹存放账本（SQLite），**拷走整个文件夹 = 备份/迁移**；
+3. 首次使用建议顺序：**设置 → 清除数据/初始分类** 确认起点 → **分类页 → 导入/出预设** 导入你的分类体系（md/txt）→ **概览 → 导入账单**（随手记 Excel 或微信流水 xlsx）。
+
+不需要 Docker，不需要 PHP，不需要命令行——这是一个**桌面绿色软件**，不是网页应用。
 
 ## 核心功能
 
@@ -69,19 +85,42 @@
 
 ![设置](https://cdn.jsdelivr.net/gh/Frostleaf0929/BillTrace@main/docs/screenshots/settings.jpg)
 
-## 开发
+## 🛠 从源码构建（开发者）
 
-```bash
-# 环境要求：Node.js ≥ 18、Rust stable (MSVC)、WebView2（Win10/11 自带）
-npm install            # 安装前端依赖
-npm run tauri dev      # 开发调试
-npm run tauri build    # 打包（产物 src-tauri/target/release/zhangji.exe）
+普通用户**不需要**这一节——直接去 [Releases](https://github.com/Frostleaf0929/BillTrace/releases) 下载 exe 即可。
+
+**构建环境要求：**
+
+| 依赖 | 版本要求 | 说明 |
+|------|---------|------|
+| [Node.js](https://nodejs.org/) | ≥ 18（含 npm） | 前端构建 |
+| [Rust](https://rustup.rs/) | stable（MSVC 工具链） | 后端编译；Windows 需装 rustup 并选择 `x86_64-pc-windows-msvc` |
+| [VS Build Tools 2022](https://visualstudio.microsoft.com/visual-cpp-build-tools/) | 勾选"C++ 生成工具"工作负载 | Rust MSVC 工具链依赖 |
+| WebView2 运行时 | Win10/11 自带 | 运行时界面载体 |
+
+**构建步骤（PowerShell）：**
+
+```powershell
+# 1. 克隆仓库
+git clone https://github.com/Frostleaf0929/BillTrace.git
+cd BillTrace
+
+# 2. 安装前端依赖（仅在项目文件夹内，局部安装）
+npm install
+
+# 3a. 开发调试（热重载）
+npm run tauri dev
+
+# 3b. 或打包发布版（产物：src-tauri\target\release\zhangji.exe）
+npm run tauri build
 ```
 
-真实数据回归测试（检测到本地数据文件则运行，否则自动跳过）：
+真实数据回归测试（设置环境变量指向本地账单数据目录后运行；未设置则自动跳过，不会读取任何隐私数据）：
 
-```bash
-cd src-tauri && cargo test --test real_data -- --nocapture
+```powershell
+cd src-tauri
+$env:ZHANGJI_REAL_DATA_DIR = "你的账单数据目录"
+cargo test --test real_data -- --nocapture
 ```
 
 ## 项目结构
