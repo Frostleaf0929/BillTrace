@@ -5,3 +5,11 @@ src-tauri/gen/
 .mimosa/
 *.local
 .DS_Store
+
+# 环境变量与密钥（规则 17：永不上传）
+.env
+.env.*
+!.env.example
+
+# 局部工具（便携二进制不入库）
+tools/
