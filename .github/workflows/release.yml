@@ -1,0 +1,54 @@
+# 自动发布工作流：推送 v* 格式的 tag（如 v0.3.0）时，
+# GitHub 会在云端 Windows 机器上自动打包并创建 Release、上传安装包。
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装 Rust 稳定版
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 缓存 Rust 编译产物
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: 安装前端依赖
+        run: npm ci
+
+      - name: 打包并创建 Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: '账痕 BillTrace ${{ github.ref_name }}'
+          releaseBody: '请在下方 Assets 中下载安装包（setup.exe）或绿色单文件版（exe）。本软件 100% 本地存储，不上传任何数据。'
+          releaseDraft: false
+          prerelease: false
+
+      - name: 上传绿色单文件版 exe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          exe=$(find "src-tauri/target/release" -maxdepth 1 -name "*.exe" -size +3M | head -1)
+          cp "$exe" "账痕 BillTrace ${{ github.ref_name }}.exe"
+          gh release upload "${{ github.ref_name }}" "账痕 BillTrace ${{ github.ref_name }}.exe" --clobber
+        shell: bash
