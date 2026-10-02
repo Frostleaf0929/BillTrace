@@ -4,10 +4,9 @@ import { ElMessage } from 'element-plus';
 import { api, fmtAmount } from '../api';
 import ChartCard from '../components/ChartCard.vue';
 import PageSub from '../components/PageSub.vue';
+import { accentLadder, chartBase, chartToken, SOFT_PALETTE } from '../lib/chartTheme';
 import type { ChartPoint, PiePoint } from '../types';
 import * as echarts from 'echarts';
-
-const PALETTE = ['#5b8ff9', '#61c0bf', '#65779b', '#f2b04c', '#9d7bde', '#6fb7e8', '#d983a6', '#7fbf7f', '#e8a87c', '#a3aecd'];
 
 // ── 第 1 层：筛选 ──
 type Dim = 'year' | 'month' | 'day';
@@ -78,52 +77,75 @@ onMounted(() => {
 
 watch([dimension, dateFrom, dateTo, groupBy, pieType], load);
 
-// ── 第 2 层：收支趋势柱状图 ──
+// ── 第 2 层：收支趋势柱状图（颜色走语义 token，图例自绘在卡片标题行）──
 const trendOption = computed<echarts.EChartsOption>(() => ({
-  backgroundColor: 'transparent',
-  tooltip: { trigger: 'axis' },
-  legend: { data: ['支出', '收入'], top: 0, itemGap: 24, textStyle: { color: '#9aa0af' } },
-  grid: { left: 8, right: 20, top: 44, bottom: barData.value.length > 40 ? 66 : 10, containLabel: true },
-  dataZoom: barData.value.length > 40 ? [{ type: 'slider', height: 18, bottom: 10 }] : [],
+  ...chartBase(),
+  grid: { left: 4, right: 12, top: 14, bottom: barData.value.length > 40 ? 56 : 0, containLabel: true },
+  dataZoom: barData.value.length > 40 ? [{ type: 'slider', height: 16, bottom: 6, borderColor: 'transparent' }] : [],
+  tooltip: {
+    ...chartBase().tooltip,
+    trigger: 'axis',
+    valueFormatter: (v) => `¥ ${fmtAmount(Number(v))}`,
+  },
   xAxis: {
+    ...chartBase().xAxis,
     type: 'category',
     data: barData.value.map((d) => d.label),
-    axisLabel: { color: '#9aa0af', rotate: barData.value.length > 12 ? 40 : 0 },
+    axisLabel: {
+      color: chartToken('--zj-text-sub', '#575d6c'),
+      fontSize: 11,
+      rotate: barData.value.length > 12 ? 40 : 0,
+    },
   },
   yAxis: {
+    ...chartBase().yAxis,
     type: 'value',
-    axisLabel: { color: '#9aa0af' },
-    splitLine: { lineStyle: { opacity: 0.12, type: 'dashed' } },
+    axisLabel: {
+      color: chartToken('--zj-text-sub', '#575d6c'),
+      fontSize: 11,
+      formatter: (v: number) => (Math.abs(v) >= 10000 ? `${(v / 10000).toFixed(1)}万` : String(v)),
+    },
   },
   series: [
     {
-      name: '支出', type: 'bar', barMaxWidth: 22, barMinHeight: 1,
-      itemStyle: { color: '#5b8ff9', borderRadius: [4, 4, 0, 0] },
+      name: '支出', type: 'bar', barWidth: '62%', barMaxWidth: 26, barMinHeight: 1,
+      itemStyle: { color: chartToken('--zj-expense', '#d9424b'), borderRadius: [4, 4, 0, 0] },
       data: barData.value.map((d) => Math.round(d.expense * 100) / 100),
     },
     {
-      name: '收入', type: 'bar', barMaxWidth: 22, barMinHeight: 1,
-      itemStyle: { color: '#61c0bf', borderRadius: [4, 4, 0, 0] },
+      name: '收入', type: 'bar', barWidth: '62%', barMaxWidth: 26, barMinHeight: 1,
+      itemStyle: { color: chartToken('--zj-income', '#299764'), borderRadius: [4, 4, 0, 0] },
       data: barData.value.map((d) => Math.round(d.income * 100) / 100),
     },
   ],
-}));
+} as echarts.EChartsOption));
 
-// ── 第 3 层：结构图（按维度） ──
+// ── 第 3 层：结构图（按维度）；排行条形用强调色阶梯，饼图用柔和色板，图例自绘 ──
+const legendItems = computed(() =>
+  pieData.value.slice(0, 12).map((d, i) => ({
+    name: d.name,
+    value: d.value,
+    color: chartKind.value === 'pie' ? SOFT_PALETTE[i % SOFT_PALETTE.length] : accentLadder(i),
+  }))
+);
+
 const structOption = computed<echarts.EChartsOption>(() => {
   const data = pieData.value.map((d) => ({ name: d.name, value: Math.round(d.value * 100) / 100 }));
   if (chartKind.value === 'pie') {
     return {
-      backgroundColor: 'transparent',
-      color: PALETTE,
-      tooltip: { trigger: 'item', formatter: '{b}<br/>¥{c}（{d}%）' },
-      legend: { type: 'scroll', orient: 'vertical', right: 6, top: 'middle', textStyle: { color: '#9aa0af' } },
+      ...chartBase(),
+      color: SOFT_PALETTE,
+      tooltip: {
+        ...chartBase().tooltip,
+        trigger: 'item',
+        formatter: '{b}<br/>¥{c}（{d}%）',
+      },
       series: [
         {
           name: pieType.value,
           type: 'pie',
-          radius: ['36%', '58%'],
-          center: ['42%', '50%'],
+          radius: ['42%', '68%'],
+          center: ['50%', '50%'],
           itemStyle: { borderRadius: 6, borderColor: 'transparent', borderWidth: 2 },
           label: { show: false },
           data,
@@ -132,19 +154,33 @@ const structOption = computed<echarts.EChartsOption>(() => {
     } as echarts.EChartsOption;
   }
   const top = data.slice(0, 12).reverse();
+  const rank = (name: string) => pieData.value.findIndex((d) => d.name === name);
   return {
-    backgroundColor: 'transparent',
-    tooltip: { trigger: 'item', formatter: '{b}<br/>¥{c}' },
-    grid: { left: 120, right: 44, top: 16, bottom: 30 },
-    xAxis: { type: 'value', axisLabel: { color: '#9aa0af' }, splitLine: { lineStyle: { opacity: 0.15 } } },
-    yAxis: { type: 'category', data: top.map((d) => d.name), axisLabel: { color: '#9aa0af', width: 100, overflow: 'truncate' } },
+    ...chartBase(),
+    tooltip: { ...chartBase().tooltip, trigger: 'item', valueFormatter: (v) => `¥ ${fmtAmount(Number(v))}` },
+    grid: { left: 4, right: 30, top: 6, bottom: 0, containLabel: true },
+    xAxis: {
+      ...chartBase().xAxis,
+      type: 'value',
+      axisLabel: {
+        color: chartToken('--zj-text-sub', '#575d6c'),
+        fontSize: 11,
+        formatter: (v: number) => (Math.abs(v) >= 10000 ? `${(v / 10000).toFixed(1)}万` : String(v)),
+      },
+      splitLine: { lineStyle: { color: chartToken('--zj-border', 'rgba(34,37,46,0.1)') } },
+    },
+    yAxis: {
+      type: 'category',
+      data: top.map((d) => d.name),
+      axisLabel: { color: chartToken('--zj-text', '#21242d'), fontSize: 12, width: 108, overflow: 'truncate' },
+    },
     series: [
       {
         name: pieType.value,
         type: 'bar',
-        barMaxWidth: 18,
-        itemStyle: { color: '#5b8ff9', borderRadius: [0, 5, 5, 0] },
-        data: top.map((d) => d.value),
+        barWidth: '62%',
+        itemStyle: { borderRadius: [0, 5, 5, 0] },
+        data: top.map((d) => ({ value: d.value, itemStyle: { color: accentLadder(rank(d.name)) } })),
       },
     ],
   } as echarts.EChartsOption;
@@ -198,7 +234,13 @@ async function exportBoth() {
 
     <!-- 第 2 层：收支趋势（柱状图） -->
     <div class="zj-card" style="margin-bottom: 14px">
-      <div style="font-weight: 600; margin-bottom: 6px">收支趋势 · {{ { year: '按年', month: '按月', day: '按日' }[dimension] }}（{{ dateFrom }} ~ {{ dateTo }}）</div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px">
+        <span style="font-weight: 600">收支趋势 · {{ { year: '按年', month: '按月', day: '按日' }[dimension] }}（{{ dateFrom }} ~ {{ dateTo }}）</span>
+        <span class="chart-legend">
+          <span class="chart-legend-item"><i class="dot" style="background: var(--zj-expense)" />支出</span>
+          <span class="chart-legend-item"><i class="dot" style="background: var(--zj-income)" />收入</span>
+        </span>
+      </div>
       <template v-if="barData.length > 0">
         <ChartCard ref="trendRef" name="收支趋势" :option="trendOption" height="340px" />
       </template>
@@ -214,6 +256,11 @@ async function exportBoth() {
         <span style="color: var(--zj-text-sub); font-size: 12px" class="zj-num">
           合计
           <span :class="pieType === '支出' ? 'zj-amount-expense' : 'zj-amount-income'">¥ {{ fmtAmount(pieData.reduce((s, d) => s + d.value, 0)) }}</span>
+        </span>
+      </div>
+      <div v-if="legendItems.length" class="chart-legend" style="margin-bottom: 4px">
+        <span v-for="it in legendItems" :key="it.name" class="chart-legend-item" :title="`${it.name}：¥ ${fmtAmount(it.value)}`">
+          <i class="dot" :style="{ background: it.color }" />{{ it.name }}
         </span>
       </div>
       <template v-if="pieData.length > 0">
@@ -235,5 +282,25 @@ async function exportBoth() {
   font-size: 13.5px;
   border: 1px dashed var(--zj-border);
   border-radius: 12px;
+}
+
+/* 自绘图例（SPEC §9.1）：8px 圆点 + 小号灰字，flex wrap */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--zj-text-sub);
+}
+.chart-legend-item .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
 }
 </style>

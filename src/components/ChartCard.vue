@@ -9,6 +9,7 @@ const el = ref<HTMLDivElement>();
 const exporting = ref(false);
 let chart: echarts.ECharts | null = null;
 let ro: ResizeObserver | null = null;
+let themeOb: MutationObserver | null = null;
 
 function render() {
   if (el.value && chart) chart.setOption(props.option, true);
@@ -20,6 +21,9 @@ onMounted(() => {
     chart.setOption(props.option);
     ro = new ResizeObserver(() => chart?.resize());
     ro.observe(el.value);
+    // 深浅主题切换时图表颜色来自 CSS token，需要整体重绘
+    themeOb = new MutationObserver(render);
+    themeOb.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
   }
 });
 
@@ -27,6 +31,7 @@ watch(() => props.option, render, { deep: true });
 
 onBeforeUnmount(() => {
   ro?.disconnect();
+  themeOb?.disconnect();
   chart?.dispose();
 });
 
