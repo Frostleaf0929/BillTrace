@@ -3,7 +3,8 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Search, Bell } from '@element-plus/icons-vue';
 import { api, fmtAmount } from '../api';
-import type { Category, Tx, TxFilter } from '../types';
+import { accentLadder } from '../lib/chartTheme';
+import type { Category, Tx, TxFilter, PiePoint } from '../types';
 import TxEditDialog from '../components/TxEditDialog.vue';
 import PendingResolveDialog from '../components/PendingResolveDialog.vue';
 import PageSub from '../components/PageSub.vue';
@@ -37,6 +38,36 @@ const editing = ref<Tx | null>(null);
 
 const l1Options = ref<Category[]>([]);
 const l2Options = ref<Category[]>([]);
+
+// ── 按商家视图：商家排行 → 点击下钻到该商家明细 ──
+const viewMode = ref<'detail' | 'merchant'>('detail');
+const merchantKind = ref<'支出' | '收入'>('支出');
+const merchants = ref<PiePoint[]>([]);
+
+async function loadMerchants() {
+  try {
+    // statsPie 的日期是必填字符串；未设筛选日期时给一个足够宽的窗口
+    const from = filter.date_from || '2000-01-01';
+    const to = filter.date_to || '2099-12-31';
+    merchants.value = await api.statsPie(merchantKind.value, from, to, 'merchant');
+  } catch (e) {
+    merchants.value = [];
+    ElMessage.error(String(e));
+  }
+}
+
+function onModeChange(m: 'detail' | 'merchant') {
+  if (m === 'merchant') loadMerchants();
+}
+
+const merchantMax = computed(() => merchants.value[0]?.value ?? 1);
+
+function drillMerchant(name: string) {
+  filter.merchant = name;
+  filter.page = 1;
+  viewMode.value = 'detail';
+  load();
+}
 
 // 多选批量操作
 const selected = ref<Tx[]>([]);
@@ -219,6 +250,10 @@ function signOf(tx: Tx): string {
 
     <div class="zj-card" style="margin-bottom: 14px">
       <div class="zj-toolbar">
+        <el-radio-group v-model="viewMode" @change="onModeChange">
+          <el-radio-button value="detail">明细</el-radio-button>
+          <el-radio-button value="merchant">商家</el-radio-button>
+        </el-radio-group>
         <el-select v-model="filter.tx_type" placeholder="类型" clearable style="width: 110px" @change="filter.page = 1; load()">
           <el-option v-for="t in ['支出', '收入', '转账', '报销', '代付', '余额变更', '债权变更']" :key="t" :label="t" :value="t" />
         </el-select>
@@ -242,8 +277,35 @@ function signOf(tx: Tx): string {
       </div>
     </div>
 
+    <!-- 按商家视图：商家排行列表，点击行下钻 -->
+    <div v-if="viewMode === 'merchant'" class="zj-card">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap">
+        <el-radio-group v-model="merchantKind" size="small" @change="loadMerchants">
+          <el-radio-button value="支出">支出</el-radio-button>
+          <el-radio-button value="收入">收入</el-radio-button>
+        </el-radio-group>
+        <span style="color: var(--zj-text-sub); font-size: 12.5px">
+          共 <b class="zj-num">{{ merchants.length }}</b> 个商家 · 点击任意商家查看其全部明细
+        </span>
+        <div style="flex: 1" />
+        <span class="zj-num" style="font-size: 12.5px; color: var(--zj-text-sub)">
+          合计
+          <b :style="{ color: merchantKind === '支出' ? 'var(--zj-expense)' : 'var(--zj-income)' }">¥ {{ fmtAmount(merchants.reduce((s, d) => s + d.value, 0)) }}</b>
+        </span>
+      </div>
+      <div v-if="merchants.length" class="merchant-list">
+        <div v-for="(m, i) in merchants" :key="m.name" class="merchant-row" @click="drillMerchant(m.name)">
+          <i class="merchant-dot" :style="{ background: accentLadder(i) }" />
+          <span class="merchant-name" :title="m.name">{{ m.name }}</span>
+          <span class="merchant-bar"><i :style="{ width: (m.value / merchantMax) * 100 + '%', background: accentLadder(i) }" /></span>
+          <span class="merchant-amt zj-num">¥ {{ fmtAmount(m.value) }}</span>
+        </div>
+      </div>
+      <div v-else class="merchant-empty">当前时间范围内暂无{{ merchantKind }}商家数据</div>
+    </div>
+
     <!-- 批量操作条 -->
-    <transition name="pop">
+    <transition v-if="viewMode === 'detail'" name="pop">
       <div v-if="selected.length > 0" class="zj-card" style="margin-bottom: 14px; display: flex; align-items: center; gap: 12px">
         <span>已选 <b class="zj-num">{{ selected.length }}</b> 条</span>
         <el-button type="primary" size="small" @click="openMove">移动到分类…</el-button>
@@ -252,7 +314,7 @@ function signOf(tx: Tx): string {
       </div>
     </transition>
 
-    <div class="zj-card">
+    <div v-if="viewMode === 'detail'" class="zj-card">
       <el-table
         ref="selectionTableRef"
         :data="rows"
@@ -361,5 +423,70 @@ function signOf(tx: Tx): string {
   min-width: 48px;
   padding-left: 10px;
   padding-right: 10px;
+}
+
+/* 商家排行列表（对标 TallyMoment 的应用列表：色点 + 名称 + 占比条 + 金额） */
+.merchant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: calc(100vh - 340px);
+  overflow-y: auto;
+}
+.merchant-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s var(--zj-ease);
+}
+.merchant-row:hover {
+  background: var(--zj-sidebar-hover);
+}
+.merchant-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.merchant-name {
+  width: 180px;
+  font-size: 13px;
+  color: var(--zj-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: none;
+}
+.merchant-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--zj-sidebar-hover);
+  overflow: hidden;
+}
+.merchant-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s var(--zj-ease);
+}
+.merchant-amt {
+  width: 110px;
+  text-align: right;
+  font-size: 13px;
+  color: var(--zj-text);
+  flex: none;
+}
+.merchant-empty {
+  height: 200px;
+  display: grid;
+  place-items: center;
+  color: var(--zj-text-sub);
+  font-size: 13.5px;
+  border: 1px dashed var(--zj-border);
+  border-radius: 12px;
 }
 </style>
