@@ -56,6 +56,10 @@ let wheelCooldown = 0;
 
 function onMainWheel(e: WheelEvent) {
   if (!wheelNavEnabled.value) return;
+  // 弹窗/下拉浮层内的滚动属于弹窗自己，禁止触发换页
+  // （否则弹窗内滚到边界会把滚动"接力"给主容器，整页被切走，弹窗随之消失）
+  const t = e.target as HTMLElement | null;
+  if (t && t.closest('.el-overlay, .el-dialog, .el-message-box, .el-popper, .el-select-dropdown')) return;
   const el = e.currentTarget as HTMLElement;
   if (!el) return;
   const now = Date.now();

@@ -476,11 +476,29 @@ pub fn list_pending(conn: &rusqlite::Connection) -> Result<Vec<PendingRow>, Stri
 pub fn resolve_pending(conn: &mut rusqlite::Connection, assigns: &[MerchantAssign], skip: &[String], batch_id: &str) -> Result<(i64, i64), String> {
     let mut confirmed = 0i64;
     let mut skipped = 0i64;
+    // 跳过的商家：交易照常入库、归入兜底分类（默认「统计未确认」），但不沉淀规则——
+    // 若直接丢弃，这些交易既不进图表也永不出现，数据就缺了一块
+    let fallback: String = conn
+        .query_row("SELECT value FROM settings WHERE key = 'fallbackCategory'", [], |r| r.get(0))
+        .unwrap_or_else(|_| "统计未确认".to_string());
     for m in skip {
-        // 被跳过商家的待确认行数：前端弹窗显示"跳过 N 条"
-        skipped += (conn
-            .execute("DELETE FROM pending_rows WHERE merchant = ?1", rusqlite::params![m])
-            .map_err(|e| e.to_string())?) as i64;
+        let rows: Vec<(i64, String, String)> = {
+            let mut stmt = conn
+                .prepare("SELECT id, tx_json, fingerprint FROM pending_rows WHERE merchant = ?1")
+                .map_err(|e| e.to_string())?;
+            let rows = stmt
+                .query_map(rusqlite::params![m], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+                .map_err(|e| e.to_string())?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
+        for (id, json, fp) in rows {
+            let mut tx: Tx = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+            tx.l1 = Some(fallback.clone());
+            tx.l2 = None;
+            insert_tx(conn, &tx, &fp, batch_id).map_err(|e| e.to_string())?;
+            let _ = conn.execute("DELETE FROM pending_rows WHERE id = ?1", rusqlite::params![id]);
+            skipped += 1;
+        }
     }
     for a in assigns {
         let kind = if a.l1.contains("收入") { "income" } else { "expense" };
@@ -601,6 +619,31 @@ mod tests {
         let r2 = insert_tx(&conn, &tx, &fp2, "b1").unwrap();
         assert_eq!((r1, r2), (true, false));
         assert_eq!(tx_count(&conn), 1);
+    }
+
+    #[test]
+    fn skipped_pending_goes_to_fallback_category() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        db::init_db(&conn).unwrap();
+        let tx = sample_tx();
+        let base = fingerprint(&tx);
+        conn.execute(
+            "INSERT INTO pending_rows(merchant, tx_json, batch_id, fingerprint) VALUES (?1,?2,?3,?4)",
+            rusqlite::params![tx.merchant.clone().unwrap(), serde_json::to_string(&tx).unwrap(), "b1", base],
+        )
+        .unwrap();
+        // 跳过 = 归入兜底分类入库（数据完整），但不沉淀规则
+        let (confirmed, skipped) = resolve_pending(&mut conn, &[], &[tx.merchant.clone().unwrap()], "b1").unwrap();
+        assert_eq!((confirmed, skipped), (0, 1));
+        let (cnt, l1): (i64, String) = conn
+            .query_row("SELECT COUNT(*), IFNULL(l1,'') FROM transactions", [], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap();
+        assert_eq!(cnt, 1);
+        assert_eq!(l1, "统计未确认");
+        let rules: i64 = conn.query_row("SELECT COUNT(*) FROM rules", [], |r| r.get(0)).unwrap();
+        assert_eq!(rules, 0);
+        let left: i64 = conn.query_row("SELECT COUNT(*) FROM pending_rows", [], |r| r.get(0)).unwrap();
+        assert_eq!(left, 0);
     }
 
     #[test]

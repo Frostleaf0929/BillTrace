@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { api } from '../api';
 import type { Category, PendingRow, MerchantAssign } from '../types';
@@ -53,7 +53,34 @@ async function load() {
       l2: null,
       action: 'assign' as const,
     }));
+  // 恢复上次未确认的草稿（中途关掉弹窗不丢已选的分类）
+  try {
+    const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? '{}') as Record<string, Pick<Group, 'action' | 'l1' | 'l2'>>;
+    for (const g of groups.value) {
+      const d = draft[g.merchant];
+      if (d) {
+        g.action = d.action;
+        g.l1 = d.l1;
+        g.l2 = d.l2;
+      }
+    }
+  } catch { /* 无草稿 */ }
 }
+
+// 草稿缓存：只要做过的选择就实时落盘，确认成功后才清除
+const DRAFT_KEY = 'zj.pendingDraft';
+
+function saveDraft() {
+  const draft: Record<string, Pick<Group, 'action' | 'l1' | 'l2'>> = {};
+  for (const g of groups.value) {
+    if (g.action === 'skip' || g.l1) draft[g.merchant] = { action: g.action, l1: g.l1, l2: g.l2 };
+  }
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch { /* 忽略 */ }
+}
+
+watch(groups, saveDraft, { deep: true });
 
 function merchantHasIncome(pending: PendingRow[], merchant: string): boolean {
   return pending.some((p) => p.tx.merchant === merchant && p.tx.tx_type === '收入');
@@ -74,7 +101,14 @@ async function confirmAll() {
   }
   try {
     const [confirmed, skipped] = await api.resolvePending(assigns, skip);
-    ElMessage.success(`已归类 ${confirmed} 条，跳过 ${skipped} 条；规则已自动沉淀`);
+    ElMessage.success(
+      skipped > 0
+        ? `已归类 ${confirmed} 条；${skipped} 条跳过记录已归入「统计未确认」（可到详细页修改）`
+        : `已归类 ${confirmed} 条；规则已自动沉淀`
+    );
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch { /* 忽略 */ }
     visible.value = false;
     emit('resolved');
   } catch (e) {
