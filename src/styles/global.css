@@ -329,6 +329,23 @@ html.dark .zj-logo .logo-dot {
   font-weight: 600;
 }
 
+/* 激活指示条（DESIGN-SPEC §6.3）：左缘 3×20px 强调色竖条 + 光晕 */
+.zj-nav-item {
+  position: relative;
+}
+.zj-nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: 0 3px 3px 0;
+  background: var(--zj-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--zj-primary) 40%, transparent);
+}
+
 .zj-nav-item .el-icon {
   font-size: 18px;
   flex-shrink: 0;
@@ -423,7 +440,10 @@ html.dark .zj-logo .logo-dot {
 }
 
 .zj-card.hoverable:hover {
+  /* 悬停三件套（DESIGN-SPEC §5.3）：上浮 + 微放大 + 描边染强调色 */
+  transform: translateY(-2px) scale(1.005);
   box-shadow: var(--zj-shadow-hover), var(--zj-inset);
+  border-color: color-mix(in srgb, var(--zj-primary) 38%, transparent);
 }
 
 .zj-page-title {

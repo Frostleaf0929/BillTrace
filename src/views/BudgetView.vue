@@ -84,6 +84,16 @@ async function editBudget(category: string) {
     <h1 class="zj-page-title">预算</h1>
     <PageSub page="budget" fallback="给总支出和各分类设上限，执行进度实时联动账目数据" />
 
+    <!-- 超支醒目提示 -->
+    <el-alert
+      v-if="total && total.spent > total.amount"
+      type="error"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 14px"
+      :title="`${keyLabel}总预算已超支：已用 ¥ ${fmtAmount(total.spent)} / ¥ ${fmtAmount(total.amount)}，超出 ¥ ${fmtAmount(total.spent - total.amount)}`"
+    />
+
     <!-- 周期切换 -->
     <div class="zj-card" style="margin-bottom: 14px; display: flex; align-items: center; gap: 12px">
       <el-radio-group v-model="period" @change="onPeriodChange">
@@ -93,6 +103,26 @@ async function editBudget(category: string) {
       <el-button circle size="small" @click="shift(-1)">‹</el-button>
       <span style="font-weight: 600; min-width: 110px; text-align: center" class="zj-num">{{ keyLabel }}</span>
       <el-button circle size="small" @click="shift(1)">›</el-button>
+      <el-date-picker
+        v-if="period === 'month'"
+        :model-value="monthKey"
+        type="month"
+        value-format="YYYY-MM"
+        :clearable="false"
+        style="width: 130px"
+        placeholder="跳到任意月"
+        @update:model-value="(v: string) => { monthKey = v; load(); }"
+      />
+      <el-date-picker
+        v-else
+        :model-value="yearKey"
+        type="year"
+        value-format="YYYY"
+        :clearable="false"
+        style="width: 110px"
+        placeholder="跳到任意年"
+        @update:model-value="(v: string) => { yearKey = v; load(); }"
+      />
       <div style="flex: 1" />
       <el-button type="primary" plain size="small" @click="editBudget('')">设置总预算</el-button>
     </div>
