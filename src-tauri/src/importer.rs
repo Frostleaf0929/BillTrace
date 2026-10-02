@@ -93,6 +93,36 @@ fn fingerprint(tx: &Tx) -> String {
     )
 }
 
+/// 同批导入的出现计数器：同一语义指纹第 1 次出现沿用裸指纹（兼容旧库已存数据），
+/// 第 2 次起追加 "#N"。这样"同日同商家同金额"的多笔独立交易各有唯一键、不再被误判丢弃；
+/// 重新导入同一份文件时出现序列不变，依旧零新增。
+#[derive(Default)]
+pub struct FingerprintSeq {
+    occ: std::collections::HashMap<String, u32>,
+}
+
+impl FingerprintSeq {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 取 tx 在本批内的有效指纹，并把该指纹的出现计数 +1
+    pub fn next(&mut self, tx: &Tx) -> String {
+        let base = fingerprint(tx);
+        // 带交易单号的记录单号本身唯一：同号即同单，同批内也判重，不加序号
+        if base.starts_with("wx|") {
+            return base;
+        }
+        let n = self.occ.entry(base.clone()).or_insert(0);
+        *n += 1;
+        if *n == 1 {
+            base
+        } else {
+            format!("{base}#{}", n)
+        }
+    }
+}
+
 pub fn detect_format(path: &str) -> Result<String, String> {
     let mut wb: Xlsx<_> = calamine::open_workbook(path).map_err(|e| format!("无法打开文件: {e}"))?;
     let names = wb.sheet_names().to_vec();
@@ -151,6 +181,7 @@ pub fn parse_suishouji(path: &str, conn: &rusqlite::Connection, batch_id: &str) 
         ..Default::default()
     };
 
+    let mut fps = FingerprintSeq::new();
     for sheet_name in wb.sheet_names().to_vec() {
         let tx_type = match TX_TYPES.iter().find(|t| sheet_name.contains(**t)) {
             Some(t) => t.to_string(),
@@ -234,7 +265,8 @@ pub fn parse_suishouji(path: &str, conn: &rusqlite::Connection, batch_id: &str) 
                 source: Some("import:suishouji".into()),
                 source_file: Some(path.to_string()),
             };
-            match insert_tx(conn, &tx, batch_id) {
+            let fp = fps.next(&tx);
+            match insert_tx(conn, &tx, &fp, batch_id) {
                 Ok(true) => inserted += 1,
                 Ok(false) => duplicates += 1,
                 Err(_) => report.skipped += 1,
@@ -305,6 +337,7 @@ pub fn parse_wechat(path: &str, conn: &mut rusqlite::Connection, batch_id: &str,
     let c_remark = col(&["备注"]);
 
     let rows: Vec<Vec<Data>> = range.rows().skip(hri + 1).map(|r| r.to_vec()).collect();
+    let mut fps = FingerprintSeq::new();
     for row in &rows {
         let get = |i: Option<usize>| -> String { i.and_then(|i| row.get(i)).map(data_to_string).unwrap_or_default() };
         let Some(time) = row.get(c_time).and_then(parse_time) else {
@@ -367,14 +400,15 @@ pub fn parse_wechat(path: &str, conn: &mut rusqlite::Connection, batch_id: &str,
         if let Some((l1, l2)) = rules::classify(conn, kind, &merchant, &goods) {
             tx.l1 = Some(l1);
             tx.l2 = l2;
-            match insert_tx(conn, &tx, batch_id) {
+            let fp = fps.next(&tx);
+            match insert_tx(conn, &tx, &fp, batch_id) {
                 Ok(true) => report.inserted += 1,
                 Ok(false) => report.duplicates += 1,
                 Err(_) => report.skipped += 1,
             }
         } else if new_merchant_prompt && !merchant.is_empty() && !rules::merchant_known(conn, &merchant) {
             // 新商家 → 待确认队列
-            let fp = fingerprint(&tx);
+            let fp = fps.next(&tx);
             let n = conn.execute(
                 "INSERT OR IGNORE INTO pending_rows(merchant, tx_json, batch_id, fingerprint) VALUES (?1,?2,?3,?4)",
                 rusqlite::params![merchant, serde_json::to_string(&tx).unwrap_or_default(), batch_id, fp],
@@ -391,7 +425,8 @@ pub fn parse_wechat(path: &str, conn: &mut rusqlite::Connection, batch_id: &str,
         } else {
             // 兜底分类
             tx.l1 = Some(fallback.to_string());
-            match insert_tx(conn, &tx, batch_id) {
+            let fp = fps.next(&tx);
+            match insert_tx(conn, &tx, &fp, batch_id) {
                 Ok(true) => report.inserted += 1,
                 Ok(false) => report.duplicates += 1,
                 Err(_) => report.skipped += 1,
@@ -403,9 +438,9 @@ pub fn parse_wechat(path: &str, conn: &mut rusqlite::Connection, batch_id: &str,
 
 // ---------------- 入库与待确认 ----------------
 
+/// 入库一条交易；fp 由调用方经 FingerprintSeq 取得（同键第 N 次出现带序号）。
 /// 返回 true=新增，false=重复
-pub fn insert_tx(conn: &rusqlite::Connection, tx: &Tx, batch_id: &str) -> Result<bool, rusqlite::Error> {
-    let fp = fingerprint(tx);
+pub fn insert_tx(conn: &rusqlite::Connection, tx: &Tx, fp: &str, batch_id: &str) -> Result<bool, rusqlite::Error> {
     let n = conn.execute(
         "INSERT OR IGNORE INTO transactions(tx_type,tx_time,l1,l2,l3,account_out,account_in,currency,amount,member,merchant,project_category,project,booker,remark,tx_no,source,source_file,batch_id,fingerprint)
          VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20)",
@@ -447,20 +482,22 @@ pub fn resolve_pending(conn: &mut rusqlite::Connection, assigns: &[MerchantAssig
     }
     for a in assigns {
         let kind = if a.l1.contains("收入") { "income" } else { "expense" };
-        let rows: Vec<(i64, String)> = {
+        let rows: Vec<(i64, String, String)> = {
             let mut stmt = conn
-                .prepare("SELECT id, tx_json FROM pending_rows WHERE merchant = ?1")
+                .prepare("SELECT id, tx_json, fingerprint FROM pending_rows WHERE merchant = ?1")
                 .map_err(|e| e.to_string())?;
             let rows = stmt
-                .query_map(rusqlite::params![a.merchant], |r| Ok((r.get(0)?, r.get(1)?)))
+                .query_map(rusqlite::params![a.merchant], |r| {
+                    Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+                })
                 .map_err(|e| e.to_string())?;
             rows.filter_map(|r| r.ok()).collect()
         };
-        for (id, json) in rows {
+        for (id, json, fp) in rows {
             let mut tx: Tx = serde_json::from_str(&json).map_err(|e| e.to_string())?;
             tx.l1 = Some(a.l1.clone());
             tx.l2 = a.l2.clone();
-            let fp = fingerprint(&tx);
+            // 直接用入队时的序号指纹：这里若重算裸指纹，语义相同的待确认行会在入库时互相撞车
             let n = conn
                 .execute(
                     "INSERT OR IGNORE INTO transactions(tx_type,tx_time,l1,l2,l3,account_out,account_in,currency,amount,member,merchant,project_category,project,booker,remark,tx_no,source,source_file,batch_id,fingerprint)
@@ -484,4 +521,109 @@ pub fn resolve_pending(conn: &mut rusqlite::Connection, assigns: &[MerchantAssig
 pub fn now_batch_id() -> String {
     let now: DateTime<chrono::Local> = chrono::Local::now();
     now.format("%Y%m%d%H%M%S%3f").to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db;
+    use rusqlite::Connection;
+
+    fn sample_tx() -> Tx {
+        Tx {
+            id: 0,
+            tx_type: "支出".into(),
+            tx_time: "2026-07-01 12:00:00".into(),
+            l1: Some("食品饮料".into()),
+            l2: Some("早午晚餐".into()),
+            l3: None,
+            account_out: Some("现金".into()),
+            account_in: None,
+            currency: Some("CNY".into()),
+            amount: 10.0,
+            member: None,
+            merchant: Some("第一食堂".into()),
+            project_category: None,
+            project: None,
+            booker: None,
+            remark: None,
+            tx_no: None,
+            source: Some("import:suishouji".into()),
+            source_file: Some("test.xlsx".into()),
+        }
+    }
+
+    fn tx_count(conn: &Connection) -> i64 {
+        conn.query_row("SELECT COUNT(*) FROM transactions", [], |r| r.get(0)).unwrap()
+    }
+
+    #[test]
+    fn identical_rows_survive_and_reimport_dedupes() {
+        let conn = Connection::open_in_memory().unwrap();
+        db::init_db(&conn).unwrap();
+        // 同日同商家同金额的 3 笔独立交易：修复前第 2、3 笔会被裸指纹误杀
+        let mut fps = FingerprintSeq::new();
+        let first: Vec<bool> = (0..3)
+            .map(|_| {
+                let fp = fps.next(&sample_tx());
+                insert_tx(&conn, &sample_tx(), &fp, "b1").unwrap()
+            })
+            .collect();
+        assert_eq!(first, vec![true, true, true]);
+        assert_eq!(tx_count(&conn), 3);
+        // 重新导入同一份文件：出现序列相同 → 全部判重，零新增
+        let mut fps2 = FingerprintSeq::new();
+        let again: Vec<bool> = (0..3)
+            .map(|_| {
+                let fp = fps2.next(&sample_tx());
+                insert_tx(&conn, &sample_tx(), &fp, "b2").unwrap()
+            })
+            .collect();
+        assert_eq!(again, vec![false, false, false]);
+        assert_eq!(tx_count(&conn), 3);
+    }
+
+    #[test]
+    fn wechat_txno_dedupes_strictly() {
+        let conn = Connection::open_in_memory().unwrap();
+        db::init_db(&conn).unwrap();
+        let mut tx = sample_tx();
+        tx.tx_no = Some("10001".into());
+        // 同一交易单号出现两次 = 同一笔单：同批内也判重，不加序号
+        let mut fps = FingerprintSeq::new();
+        let fp1 = fps.next(&tx);
+        let r1 = insert_tx(&conn, &tx, &fp1, "b1").unwrap();
+        let fp2 = fps.next(&tx);
+        assert_eq!(fp1, "wx|10001");
+        assert_eq!(fp2, "wx|10001");
+        let r2 = insert_tx(&conn, &tx, &fp2, "b1").unwrap();
+        assert_eq!((r1, r2), (true, false));
+        assert_eq!(tx_count(&conn), 1);
+    }
+
+    #[test]
+    fn pending_resolve_keeps_semantically_identical_rows() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        db::init_db(&conn).unwrap();
+        let tx = sample_tx();
+        let base = fingerprint(&tx);
+        // 两条语义相同的新商家待确认行：入队时序号指纹已分开
+        for fp in [base.clone(), format!("{base}#2")] {
+            conn.execute(
+                "INSERT INTO pending_rows(merchant, tx_json, batch_id, fingerprint) VALUES (?1,?2,?3,?4)",
+                rusqlite::params![tx.merchant.clone().unwrap(), serde_json::to_string(&tx).unwrap(), "b1", fp],
+            )
+            .unwrap();
+        }
+        let assigns = vec![MerchantAssign {
+            merchant: tx.merchant.clone().unwrap(),
+            l1: "食品饮料".into(),
+            l2: Some("早午晚餐".into()),
+        }];
+        let (confirmed, _skipped) = resolve_pending(&mut conn, &assigns, &[], "b1").unwrap();
+        assert_eq!(confirmed, 2);
+        assert_eq!(tx_count(&conn), 2);
+        let left: i64 = conn.query_row("SELECT COUNT(*) FROM pending_rows", [], |r| r.get(0)).unwrap();
+        assert_eq!(left, 0);
+    }
 }

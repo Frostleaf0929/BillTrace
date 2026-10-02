@@ -13,3 +13,6 @@ src-tauri/gen/
 
 # 局部工具（便携二进制不入库）
 tools/
+
+# 会话交接文档（仅本地保留）
+HANDOFF.md
