@@ -198,3 +198,11 @@ pub struct AccountBalance {
     pub net: f64,
     pub balance: f64,
 }
+
+/// 预算执行状态（category 为空串 = 总预算）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BudgetStatus {
+    pub category: String,
+    pub amount: f64,
+    pub spent: f64,
+}

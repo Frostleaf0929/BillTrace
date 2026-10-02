@@ -103,6 +103,15 @@ pub fn init_db(conn: &Connection) -> rusqlite::Result<()> {
             updated_at TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS budgets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            period TEXT NOT NULL,            -- 'month' | 'year'
+            period_key TEXT NOT NULL,        -- '2026-10' / '2026'
+            category TEXT NOT NULL DEFAULT '', -- '' = 总预算，否则一级分类名
+            amount REAL NOT NULL,
+            UNIQUE(period, period_key, category)
+        );
+
         INSERT OR IGNORE INTO settings(key, value) VALUES
             ('newMerchantPrompt', 'true'),
             ('fallbackCategory', '统计未确认'),

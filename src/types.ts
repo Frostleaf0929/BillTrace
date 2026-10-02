@@ -141,6 +141,12 @@ export interface PiePoint {
   value: number;
 }
 
+export interface BudgetStatus {
+  category: string; // '' = 总预算
+  amount: number;
+  spent: number;
+}
+
 export interface AccountBalance {
   name: string;
   group: string;

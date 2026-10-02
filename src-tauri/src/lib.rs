@@ -56,6 +56,8 @@ pub fn run() {
             commands::stats_summary,
             commands::stats_chart,
             commands::stats_pie,
+            commands::budget_list,
+            commands::budget_set,
             commands::category_sums,
             commands::account_balances,
             commands::set_account_base,

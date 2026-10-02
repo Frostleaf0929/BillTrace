@@ -8,6 +8,7 @@ const router = createRouter({
     { path: '/categories', component: () => import('./views/CategoriesView.vue'), meta: { title: '分类' } },
     { path: '/detail', component: () => import('./views/DetailView.vue'), meta: { title: '详细' } },
     { path: '/stats', component: () => import('./views/StatsView.vue'), meta: { title: '统计' } },
+    { path: '/budget', component: () => import('./views/BudgetView.vue'), meta: { title: '预算' } },
     { path: '/settings', component: () => import('./views/SettingsView.vue'), meta: { title: '设置' } },
   ],
 });

@@ -598,6 +598,76 @@ pub fn set_account_base(state: C, name: String, balance: f64) -> Result<(), Stri
 }
 
 #[tauri::command]
+// ---------- 预算 ----------
+
+/// 预算周期的支出区间 [start, end)，end = 下一周期第一天 00:00:00
+fn budget_range(period: &str, key: &str) -> Result<(String, String), String> {
+    if period == "month" {
+        let (y, m) = key.split_once('-').ok_or("月份格式应为 YYYY-MM")?;
+        let y: i32 = y.parse().map_err(|_| "年份格式错误")?;
+        let m: u32 = m.parse().map_err(|_| "月份格式错误")?;
+        let (ny, nm) = if m == 12 { (y + 1, 1) } else { (y, m + 1) };
+        Ok((format!("{key}-01 00:00:00"), format!("{ny:04}-{nm:02}-01 00:00:00")))
+    } else {
+        let y: i32 = key.parse().map_err(|_| "年份格式错误")?;
+        Ok((format!("{y}-01-01 00:00:00"), format!("{}-01-01 00:00:00", y + 1)))
+    }
+}
+
+fn budget_spent(conn: &rusqlite::Connection, category: &str, start: &str, end: &str) -> f64 {
+    let sql = if category.is_empty() {
+        "SELECT IFNULL(SUM(amount),0) FROM transactions WHERE tx_type='支出' AND tx_time >= ?1 AND tx_time < ?2"
+    } else {
+        "SELECT IFNULL(SUM(amount),0) FROM transactions WHERE tx_type='支出' AND l1=?3 AND tx_time >= ?1 AND tx_time < ?2"
+    };
+    conn.query_row(sql, rusqlite::params![start, end, category], |r| r.get(0)).unwrap_or(0.0)
+}
+
+/// 某周期的全部预算及其执行情况（category 空串 = 总预算）
+#[tauri::command]
+pub fn budget_list(state: C, period: String, period_key: String) -> Result<Vec<BudgetStatus>, String> {
+    let conn = state.conn.lock().map_err(|_| "数据库被占用")?;
+    let (start, end) = budget_range(&period, &period_key)?;
+    let budgets: Vec<(String, f64)> = {
+        let mut stmt = conn
+            .prepare("SELECT category, amount FROM budgets WHERE period = ?1 AND period_key = ?2 ORDER BY CASE WHEN category = '' THEN 0 ELSE 1 END, id")
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params![period, period_key], |r| Ok((r.get(0)?, r.get(1)?)))
+            .map_err(|e| e.to_string())?;
+        rows.filter_map(|r| r.ok()).collect()
+    };
+    Ok(budgets
+        .into_iter()
+        .map(|(category, amount)| {
+            let spent = budget_spent(&conn, &category, &start, &end);
+            BudgetStatus { category, amount, spent }
+        })
+        .collect())
+}
+
+/// 设置预算：amount <= 0 视为删除该条预算
+#[tauri::command]
+pub fn budget_set(state: C, period: String, period_key: String, category: String, amount: f64) -> Result<(), String> {
+    let conn = state.conn.lock().map_err(|_| "数据库被占用")?;
+    if amount <= 0.0 {
+        conn.execute(
+            "DELETE FROM budgets WHERE period = ?1 AND period_key = ?2 AND category = ?3",
+            rusqlite::params![period, period_key, category],
+        )
+        .map_err(|e| e.to_string())?;
+    } else {
+        conn.execute(
+            "INSERT INTO budgets(period, period_key, category, amount) VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(period, period_key, category) DO UPDATE SET amount = ?4",
+            rusqlite::params![period, period_key, category, amount],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn category_sums(state: C, kind: String, month_prefix: String) -> Result<std::collections::HashMap<String, f64>, String> {
     with_conn(&state, |conn| stats::category_month_sums(conn, &kind, &month_prefix)).map_err(|e| e.to_string())
 }

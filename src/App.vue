@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { Odometer, CollectionTag, Memo, TrendCharts, Setting, Moon, Sunny, Minus, Close } from '@element-plus/icons-vue';
+import { Odometer, CollectionTag, Memo, TrendCharts, Wallet, Setting, Moon, Sunny, Minus, Close } from '@element-plus/icons-vue';
 import { api } from './api';
 import {
   initAppearance, isDark, themeMode, toggleTheme, brightnessOverlayStyle,
@@ -21,6 +21,7 @@ const navs = [
   { path: '/categories', title: '分类', icon: CollectionTag },
   { path: '/detail', title: '详细', icon: Memo },
   { path: '/stats', title: '统计', icon: TrendCharts },
+  { path: '/budget', title: '预算', icon: Wallet },
   { path: '/settings', title: '设置', icon: Setting },
 ];
 

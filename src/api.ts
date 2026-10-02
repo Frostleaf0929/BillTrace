@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import type {
   Category, CategoryInput, Rule, RuleInput, Tx, TxFilter, TxPage,
   ImportReport, MerchantAssign, PendingRow, PresetPreview,
-  SummaryStats, ChartPoint, PiePoint, AccountBalance,
+  SummaryStats, ChartPoint, PiePoint, AccountBalance, BudgetStatus,
 } from './types';
 
 export const api = {
@@ -44,6 +44,10 @@ export const api = {
     invoke<ChartPoint[]>('stats_chart', { dimension, dateFrom, dateTo }),
   statsPie: (txType: string, dateFrom: string, dateTo: string, groupBy: string) =>
     invoke<PiePoint[]>('stats_pie', { txType, dateFrom, dateTo, groupBy }),
+  budgetList: (period: string, periodKey: string) =>
+    invoke<BudgetStatus[]>('budget_list', { period, periodKey }),
+  budgetSet: (period: string, periodKey: string, category: string, amount: number) =>
+    invoke<void>('budget_set', { period, periodKey, category, amount }),
   categorySums: (kind: string, monthPrefix: string) =>
     invoke<Record<string, number>>('category_sums', { kind, monthPrefix }),
   accountBalances: () => invoke<AccountBalance[]>('account_balances'),

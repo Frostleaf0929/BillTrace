@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 import { UploadFilled, EditPen, Coin, Money, Wallet, Plus, Delete, CollectionTag } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { api, fmtAmount } from '../api';
-import type { AccountBalance, SummaryStats, Tx } from '../types';
+import type { AccountBalance, SummaryStats, Tx, BudgetStatus } from '../types';
 import ImportBillDialog from '../components/ImportBillDialog.vue';
 import TxEditDialog from '../components/TxEditDialog.vue';
 import AccountBaseDialog from '../components/AccountBaseDialog.vue';
@@ -12,6 +12,19 @@ import PageSub from '../components/PageSub.vue';
 
 const router = useRouter();
 const summary = ref<SummaryStats | null>(null);
+
+// 本月总预算执行（未设预算时显示引导；"剩余/日均"细账在预算页看）
+const monthBudget = ref<BudgetStatus | null>(null);
+const monthKeyNow = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+async function loadBudget() {
+  try {
+    const list = await api.budgetList('month', monthKeyNow);
+    monthBudget.value = list.find((i) => i.category === '') ?? null;
+  } catch {
+    monthBudget.value = null;
+  }
+}
 const recent = ref<Tx[]>([]);
 const balances = ref<AccountBalance[]>([]);
 const accountOrder = ref<string[]>([]);
@@ -176,6 +189,7 @@ async function load() {
   } catch (e) {
     ElMessage.error(String(e));
   }
+  loadBudget();
   if (accountOrder.value.length === 0) {
     try {
       const raw = await api.getSetting('accountOrder');
@@ -269,6 +283,39 @@ function signOf(tx: Tx): string {
         </el-button>
         <el-button text type="primary" @click="router.push('/stats')">查看统计 →</el-button>
       </div>
+    </div>
+
+    <!-- 本月总预算执行卡（未设预算时显示引导） -->
+    <div v-if="monthBudget" class="zj-card" style="margin-bottom: 14px">
+      <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap">
+        <span style="font-weight: 600">本月预算</span>
+        <span
+          class="zj-num"
+          :style="{ color: monthBudget.spent > monthBudget.amount ? 'var(--zj-expense)' : 'var(--zj-text)' }"
+          style="font-size: 20px; font-weight: 700"
+        >¥ {{ fmtAmount(monthBudget.spent) }}</span>
+        <span class="zj-num" style="color: var(--zj-text-sub); font-size: 12.5px">
+          / ¥ {{ fmtAmount(monthBudget.amount) }} · 已用 {{ ((monthBudget.spent / monthBudget.amount) * 100).toFixed(0) }}%
+        </span>
+        <div style="flex: 1" />
+        <router-link to="/budget" style="font-size: 12.5px">去预算页 ›</router-link>
+      </div>
+      <div style="height: 8px; border-radius: 999px; background: var(--zj-sidebar-hover); overflow: hidden; margin-top: 8px">
+        <i
+          :style="{
+            display: 'block',
+            height: '100%',
+            borderRadius: '999px',
+            width: Math.min(monthBudget.spent / monthBudget.amount, 1) * 100 + '%',
+            background: monthBudget.spent > monthBudget.amount ? 'var(--zj-expense)' : monthBudget.spent / monthBudget.amount > 0.8 ? 'var(--zj-transfer)' : 'var(--zj-primary)',
+          }"
+        />
+      </div>
+    </div>
+    <div v-else class="zj-card" style="margin-bottom: 14px; display: flex; align-items: center; gap: 10px">
+      <span style="color: var(--zj-text-sub); font-size: 13px">本月还没设总预算——设一个，超支前心里有数。</span>
+      <div style="flex: 1" />
+      <router-link to="/budget" style="font-size: 12.5px">去设置 ›</router-link>
     </div>
 
     <!-- 账户余额框架：拖拽排序 / 增删 / 双击设基数 -->
