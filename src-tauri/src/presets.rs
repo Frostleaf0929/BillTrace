@@ -64,7 +64,7 @@ fn clean_name(s: &str) -> String {
     out.trim().trim_end_matches('等').to_string()
 }
 
-/// "谷费，ゲーム ， live&演出" → ["谷费", "ゲーム", "live&演出"]
+/// "水果，蔬菜 ， 零食" → ["水果", "蔬菜", "零食"]
 fn split_children(s: &str) -> Vec<String> {
     s.split(|c: char| c == '，' || c == ',' || c == '、' || c == '；' || c == ';')
         .map(clean_name)

@@ -129,12 +129,13 @@ function onChipPointerUp() {
 }
 
 async function addAccount() {
-  const { value } = await ElMessageBox.prompt('输入新账户名称（如：微信钱包、招行储蓄卡）', '新增账户', {
+  const res = await ElMessageBox.prompt('输入新账户名称（如：微信钱包、招行储蓄卡）', '新增账户', {
     inputPattern: /\S+/,
     inputErrorMessage: '名称不能为空',
-  });
+  }).catch(() => null);
+  if (res === null) return; // 用户取消
   try {
-    await api.saveCategory({ kind: 'account', parent_id: null, name: value.trim() });
+    await api.saveCategory({ kind: 'account', parent_id: null, name: res.value.trim() });
     ElMessage.success('账户已添加（在「分类 → 账户分类」中可归入子级）');
     await load();
   } catch (e) {
@@ -143,7 +144,11 @@ async function addAccount() {
 }
 
 async function removeAccount(acc: AccountBalance) {
-  await ElMessageBox.confirm(`删除账户「${acc.name}」？其账目记录保留，仅移除账户本身。`, '删除账户', { type: 'warning' });
+  try {
+    await ElMessageBox.confirm(`删除账户「${acc.name}」？其账目记录保留，仅移除账户本身。`, '删除账户', { type: 'warning' });
+  } catch {
+    return; // 用户取消
+  }
   try {
     const cats = await api.listCategories('account');
     const node = cats.find((c) => c.name === acc.name);

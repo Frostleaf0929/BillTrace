@@ -1,8 +1,8 @@
 [package]
 name = "zhangji"
 version = "0.2.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "账痕 BillTrace —— 绿色便携的个人账单管理桌面应用"
+authors = ["Frostleaf0929"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

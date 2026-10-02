@@ -94,15 +94,31 @@ async function removeBackground() {
 }
 
 async function clearTx() {
-  await ElMessageBox.confirm('清空全部账目记录（交易与待确认队列）？分类、规则、账户基数保留。此操作不可恢复！', '清除账目数据', { type: 'error', confirmButtonText: '清空账目' });
-  await api.clearData('tx');
-  ElMessage.success('账目数据已清空');
+  try {
+    await ElMessageBox.confirm('清空全部账目记录（交易与待确认队列）？分类、规则、账户基数保留。此操作不可恢复！', '清除账目数据', { type: 'error', confirmButtonText: '清空账目' });
+  } catch {
+    return; // 用户取消
+  }
+  try {
+    await api.clearData('tx');
+    ElMessage.success('账目数据已清空');
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
 }
 
 async function clearAll() {
-  await ElMessageBox.confirm('清除全部数据（账目 + 分类 + 规则 + 账户基数），恢复到初始状态？此操作不可恢复！建议先「立即备份」。', '清除全部数据', { type: 'error', confirmButtonText: '全部清除' });
-  await api.clearData('all');
-  ElMessage.success('已恢复初始状态');
+  try {
+    await ElMessageBox.confirm('清除全部数据（账目 + 分类 + 规则 + 账户基数），恢复到初始状态？此操作不可恢复！建议先「立即备份」。', '清除全部数据', { type: 'error', confirmButtonText: '全部清除' });
+  } catch {
+    return; // 用户取消
+  }
+  try {
+    await api.clearData('all');
+    ElMessage.success('已恢复初始状态');
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
 }
 
 async function doExport(format: 'xlsx' | 'csv') {

@@ -21,7 +21,7 @@ async function pickAndImport() {
   const { open } = await import('@tauri-apps/plugin-dialog');
   const picked = await open({
     multiple: false,
-    filters: [{ name: 'Excel 账单', extensions: ['xlsx', 'xls'] }],
+    filters: [{ name: 'Excel 账单', extensions: ['xlsx'] }],
   });
   if (!picked || Array.isArray(picked)) return;
   importing.value = true;

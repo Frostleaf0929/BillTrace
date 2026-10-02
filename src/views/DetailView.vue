@@ -128,10 +128,18 @@ function onResolved() {
 }
 
 async function remove(tx: Tx) {
-  await ElMessageBox.confirm(`删除这条 ${tx.tx_time} 的记录（${fmtAmount(tx.amount)}）？`, '删除', { type: 'warning' });
-  await api.deleteTransaction(tx.id);
-  ElMessage.success('已删除');
-  load();
+  try {
+    await ElMessageBox.confirm(`删除这条 ${tx.tx_time} 的记录（${fmtAmount(tx.amount)}）？`, '删除', { type: 'warning' });
+  } catch {
+    return; // 用户取消
+  }
+  try {
+    await api.deleteTransaction(tx.id);
+    ElMessage.success('已删除');
+    load();
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
 }
 
 function onSelectionChange(rowsSel: Tx[]) {
@@ -140,11 +148,19 @@ function onSelectionChange(rowsSel: Tx[]) {
 
 async function batchDelete() {
   const n = selected.value.length;
-  await ElMessageBox.confirm(`确定删除选中的 ${n} 条记录？此操作不可恢复。`, '批量删除', { type: 'warning' });
-  const ids = selected.value.map((r) => r.id);
-  const deleted = await api.deleteTransactions(ids);
-  ElMessage.success(`已删除 ${deleted} 条`);
-  load();
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${n} 条记录？此操作不可恢复。`, '批量删除', { type: 'warning' });
+  } catch {
+    return; // 用户取消
+  }
+  try {
+    const ids = selected.value.map((r) => r.id);
+    const deleted = await api.deleteTransactions(ids);
+    ElMessage.success(`已删除 ${deleted} 条`);
+    load();
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
 }
 
 function openMove() {

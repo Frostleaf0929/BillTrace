@@ -91,10 +91,12 @@ function nameClass(level: number): string {
 
 async function addChild(node: CatNode) {
   const label = node.level === 1 ? '二级' : '三级（小级）';
-  const { value } = await ElMessageBox.prompt(`在「${node.name}」下新增${label}分类`, '添加分类', {
+  const res = await ElMessageBox.prompt(`在「${node.name}」下新增${label}分类`, '添加分类', {
     inputPattern: /\S+/,
     inputErrorMessage: '名称不能为空',
-  });
+  }).catch(() => null);
+  if (res === null) return; // 用户取消
+  const { value } = res;
   try {
     await api.saveCategory({ kind: node.kind, parent_id: node.id, name: value.trim() });
     ElMessage.success('已添加');
@@ -105,23 +107,38 @@ async function addChild(node: CatNode) {
 }
 
 async function addRoot() {
-  const { value } = await ElMessageBox.prompt(`新增${kindLabel[kind.value]}一级分类`, '添加分类', {
+  const res = await ElMessageBox.prompt(`新增${kindLabel[kind.value]}一级分类`, '添加分类', {
     inputPattern: /\S+/,
     inputErrorMessage: '名称不能为空',
-  });
-  await api.saveCategory({ kind: kind.value, parent_id: null, name: value.trim() });
-  ElMessage.success('已添加');
+  }).catch(() => null);
+  if (res === null) return; // 用户取消
+  try {
+    await api.saveCategory({ kind: kind.value, parent_id: null, name: res.value.trim() });
+    ElMessage.success('已添加');
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
   load();
 }
 
 async function rename(node: CatNode) {
-  const { value } = await ElMessageBox.prompt('重命名', '重命名', { inputValue: node.name, inputPattern: /\S+/ });
-  await api.saveCategory({ id: node.id, kind: node.kind, parent_id: node.parent_id, name: value.trim() });
+  const res = await ElMessageBox.prompt('重命名', '重命名', { inputValue: node.name, inputPattern: /\S+/ }).catch(() => null);
+  if (res === null) return; // 用户取消
+  try {
+    await api.saveCategory({ id: node.id, kind: node.kind, parent_id: node.parent_id, name: res.value.trim() });
+    ElMessage.success('已重命名');
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
   load();
 }
 
 async function remove(node: CatNode) {
-  await ElMessageBox.confirm(`确定删除「${node.name}」？其下子分类需先处理。`, '删除分类', { type: 'warning' });
+  try {
+    await ElMessageBox.confirm(`确定删除「${node.name}」？其下子分类需先处理。`, '删除分类', { type: 'warning' });
+  } catch {
+    return; // 用户取消
+  }
   try {
     await api.deleteCategory(node.id);
     ElMessage.success('已删除');

@@ -29,7 +29,7 @@ pub fn classify(conn: &Connection, kind: &str, merchant: &str, goods: &str) -> O
     let goods_lc = goods.to_lowercase();
     for rule in rules.iter().filter(|r| r.enabled && r.kind == kind) {
         let kw = rule.keyword.to_lowercase();
-        if (kw.is_empty() || merchant_lc.contains(&kw) || goods_lc.contains(&kw)) && !kw.is_empty() {
+        if !kw.is_empty() && (merchant_lc.contains(&kw) || goods_lc.contains(&kw)) {
             return Some((rule.l1.clone(), rule.l2.clone()));
         }
     }
