@@ -87,7 +87,12 @@ async function save() {
     ElMessage.warning('请至少填写日期与金额');
     return;
   }
-  await api.saveTransaction({ ...form, amount: Number(form.amount) });
+  try {
+    await api.saveTransaction({ ...form, amount: Number(form.amount) });
+  } catch (e) {
+    ElMessage.error(String(e));
+    return;
+  }
   ElMessage.success(form.id ? '已保存修改' : '已新增记录');
   visible.value = false;
   emit('saved');

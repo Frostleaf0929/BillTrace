@@ -607,7 +607,7 @@ pub fn category_sums(state: C, kind: String, month_prefix: String) -> Result<std
 #[tauri::command]
 pub fn export_data(state: C, app: AppHandle, format: String, filter: TxFilter) -> Result<usize, String> {
     let ext = if format == "csv" { "csv" } else { "xlsx" };
-    let default_name = format!("账迹导出_{}.{}", chrono::Local::now().format("%Y%m%d_%H%M%S"), ext);
+    let default_name = format!("账痕导出_{}.{}", chrono::Local::now().format("%Y%m%d_%H%M%S"), ext);
     let path = app
         .dialog()
         .file()

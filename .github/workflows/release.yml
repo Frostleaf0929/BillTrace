@@ -49,6 +49,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           exe=$(find "src-tauri/target/release" -maxdepth 1 -name "*.exe" -size +3M | head -1)
-          cp "$exe" "账痕 BillTrace ${{ github.ref_name }}.exe"
-          gh release upload "${{ github.ref_name }}" "账痕 BillTrace ${{ github.ref_name }}.exe" --clobber
+          cp "$exe" "BillTrace_${{ github.ref_name }}_x64.exe"
+          gh release upload "${{ github.ref_name }}" "BillTrace_${{ github.ref_name }}_x64.exe" --clobber
         shell: bash

@@ -163,10 +163,14 @@ async function removeAccount(acc: AccountBalance) {
 }
 
 async function load() {
-  summary.value = await api.statsSummary();
-  const page = await api.queryTransactions({ page: 1, page_size: 10 });
-  recent.value = page.rows;
-  balances.value = await api.accountBalances();
+  try {
+    summary.value = await api.statsSummary();
+    const page = await api.queryTransactions({ page: 1, page_size: 10 });
+    recent.value = page.rows;
+    balances.value = await api.accountBalances();
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
   if (accountOrder.value.length === 0) {
     try {
       const raw = await api.getSetting('accountOrder');

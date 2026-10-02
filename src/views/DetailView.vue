@@ -66,15 +66,23 @@ async function load() {
   } finally {
     loading.value = false;
   }
-  pendingCount.value = (await api.listPending()).length;
+  try {
+    pendingCount.value = (await api.listPending()).length;
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
   pendingUrgent.value = pendingCount.value > pendingSeen.value;
   selected.value = [];
 }
 
 onMounted(async () => {
-  const all = await api.listCategories();
-  categories.value = all;
-  l1Options.value = all.filter((c) => (c.kind === 'expense' || c.kind === 'income') && c.parent_id === null);
+  try {
+    const all = await api.listCategories();
+    categories.value = all;
+    l1Options.value = all.filter((c) => (c.kind === 'expense' || c.kind === 'income') && c.parent_id === null);
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
   try {
     pendingSeen.value = Number(await api.getSetting('pendingSeenCount')) || 0;
   } catch { /* 默认 0 */ }

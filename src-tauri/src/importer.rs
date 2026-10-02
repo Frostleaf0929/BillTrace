@@ -475,10 +475,12 @@ pub fn list_pending(conn: &rusqlite::Connection) -> Result<Vec<PendingRow>, Stri
 /// 按商家处理待确认：确认分类（并学习规则）或跳过
 pub fn resolve_pending(conn: &mut rusqlite::Connection, assigns: &[MerchantAssign], skip: &[String], batch_id: &str) -> Result<(i64, i64), String> {
     let mut confirmed = 0i64;
-    let skipped = 0i64;
+    let mut skipped = 0i64;
     for m in skip {
-        conn.execute("DELETE FROM pending_rows WHERE merchant = ?1", rusqlite::params![m])
-            .map_err(|e| e.to_string())?;
+        // 被跳过商家的待确认行数：前端弹窗显示"跳过 N 条"
+        skipped += (conn
+            .execute("DELETE FROM pending_rows WHERE merchant = ?1", rusqlite::params![m])
+            .map_err(|e| e.to_string())?) as i64;
     }
     for a in assigns {
         let kind = if a.l1.contains("收入") { "income" } else { "expense" };

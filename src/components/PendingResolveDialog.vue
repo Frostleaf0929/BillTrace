@@ -72,10 +72,14 @@ async function confirmAll() {
       assigns.push({ merchant: g.merchant, l1: g.l1, l2: g.l2 || null });
     }
   }
-  const [confirmed, skipped] = await api.resolvePending(assigns, skip);
-  ElMessage.success(`已归类 ${confirmed} 条，跳过 ${skipped} 条；规则已自动沉淀`);
-  visible.value = false;
-  emit('resolved');
+  try {
+    const [confirmed, skipped] = await api.resolvePending(assigns, skip);
+    ElMessage.success(`已归类 ${confirmed} 条，跳过 ${skipped} 条；规则已自动沉淀`);
+    visible.value = false;
+    emit('resolved');
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
 }
 
 defineExpose({ load });
