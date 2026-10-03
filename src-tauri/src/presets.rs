@@ -137,7 +137,7 @@ pub fn parse_md(text: &str) -> PresetPreview {
             // 一级目录行本身可能混入说明文字，限制每项长度
             for name in names {
                 if name.chars().count() <= 20 {
-                    preview.categories.push(PresetCategory { kind: kind.clone(), l1: name, l2: None });
+                    preview.categories.push(PresetCategory { kind: kind.clone(), l1: name, l2: None, l3: None });
                 }
             }
         }
@@ -176,12 +176,22 @@ pub fn parse_md(text: &str) -> PresetPreview {
             let is_note_only = (l2_raw.starts_with('（') && l2_raw.ends_with('）'))
                 || (l2_raw.starts_with('(') && l2_raw.ends_with(')'))
                 || placeholder_is_empty(l2_raw);
+            // 第三列（小级）可选：仅在二级唯一时挂接，避免歧义
+            let l3_raw = cells.get(2).map(|c| c.trim()).unwrap_or("");
+            let has_l3 = !l3_raw.is_empty() && !placeholder_is_empty(l3_raw);
             let children = if is_note_only { vec![] } else { split_children(&cells[1]) };
             if children.is_empty() {
-                preview.categories.push(PresetCategory { kind: kind.clone(), l1: l1.clone(), l2: None });
+                preview.categories.push(PresetCategory { kind: kind.clone(), l1: l1.clone(), l2: None, l3: None });
+            } else if has_l3 && children.len() == 1 {
+                preview.categories.push(PresetCategory {
+                    kind: kind.clone(),
+                    l1: l1.clone(),
+                    l2: Some(children[0].clone()),
+                    l3: Some(clean_name(l3_raw)),
+                });
             } else {
                 for child in children {
-                    preview.categories.push(PresetCategory { kind: kind.clone(), l1: l1.clone(), l2: Some(child) });
+                    preview.categories.push(PresetCategory { kind: kind.clone(), l1: l1.clone(), l2: Some(child), l3: None });
                 }
             }
         }
@@ -203,10 +213,10 @@ pub fn parse_md(text: &str) -> PresetPreview {
                     if !l1.is_empty() && l1.chars().count() <= 15 {
                         let children = split_children(rest_raw);
                         if children.is_empty() {
-                            preview.categories.push(PresetCategory { kind: kind.clone(), l1: l1.clone(), l2: None });
+                            preview.categories.push(PresetCategory { kind: kind.clone(), l1: l1.clone(), l2: None, l3: None });
                         } else {
                             for child in children {
-                                preview.categories.push(PresetCategory { kind: kind.clone(), l1: l1.clone(), l2: Some(child) });
+                                preview.categories.push(PresetCategory { kind: kind.clone(), l1: l1.clone(), l2: Some(child), l3: None });
                             }
                         }
                     }
@@ -216,7 +226,7 @@ pub fn parse_md(text: &str) -> PresetPreview {
     }
 
     // 去重（同 kind+l1+l2）
-    preview.categories.dedup_by(|a, b| a.kind == b.kind && a.l1 == b.l1 && a.l2 == b.l2);
+    preview.categories.dedup_by(|a, b| a.kind == b.kind && a.l1 == b.l1 && a.l2 == b.l2 && a.l3 == b.l3);
     if preview.categories.is_empty() && preview.rules.is_empty() {
         preview.warnings.push("未识别出任何分类或规则，请检查文档格式（需包含「一级目录」「二级目录」或对应表格）".into());
     }
@@ -291,6 +301,7 @@ fn parse_rules_table(lines: &[&str], preview: &mut PresetPreview) {
 pub fn parse_txt_file(text: &str) -> PresetPreview {
     let mut preview = PresetPreview { categories: vec![], rules: vec![], warnings: vec![] };
     let mut current_kind: Option<String> = None;
+    let mut last_indent = 0usize;
 
     for raw in text.lines() {
         let t = raw.trim();
@@ -314,6 +325,7 @@ pub fn parse_txt_file(text: &str) -> PresetPreview {
                         kind: kind,
                         l1: clean_name(parts[1]),
                         l2: parts.get(2).map(|p| clean_name(p)),
+                        l3: parts.get(3).map(|p| clean_name(p)),
                     });
                 }
                 continue;
@@ -332,16 +344,21 @@ pub fn parse_txt_file(text: &str) -> PresetPreview {
         }
         let kind = current_kind.clone().unwrap_or_else(|| "expense".into());
         if indent == 0 {
-            preview.categories.push(PresetCategory { kind, l1: name, l2: None });
-        } else {
-            if let Some(last) = preview.categories.last().cloned() {
-                preview.categories.push(PresetCategory { kind: last.kind, l1: last.l1, l2: Some(name) });
+            preview.categories.push(PresetCategory { kind, l1: name, l2: None, l3: None });
+            last_indent = 0;
+        } else if let Some(last) = preview.categories.last().cloned() {
+            if last.l2.is_some() && indent > last_indent {
+                // 比上一行（二级）缩进更深 → 三级（小级）
+                preview.categories.push(PresetCategory { kind: last.kind, l1: last.l1, l2: last.l2, l3: Some(name) });
             } else {
-                preview.warnings.push(format!("行「{name}」缺少所属一级分类，已跳过"));
+                preview.categories.push(PresetCategory { kind: last.kind, l1: last.l1, l2: Some(name), l3: None });
             }
+            last_indent = indent;
+        } else {
+            preview.warnings.push(format!("行「{name}」缺少所属一级分类，已跳过"));
         }
     }
-    preview.categories.dedup_by(|a, b| a.kind == b.kind && a.l1 == b.l1 && a.l2 == b.l2);
+    preview.categories.dedup_by(|a, b| a.kind == b.kind && a.l1 == b.l1 && a.l2 == b.l2 && a.l3 == b.l3);
     preview
 }
 

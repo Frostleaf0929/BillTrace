@@ -77,6 +77,7 @@ async function apply() {
         </el-table-column>
         <el-table-column label="一级" prop="l1" />
         <el-table-column label="二级" prop="l2" />
+        <el-table-column label="小级" prop="l3" />
       </el-table>
       <el-table v-if="preview.rules.length" :data="preview.rules.slice(0, 100)" size="small" max-height="200" style="margin-top: 10px">
         <el-table-column label="关键词" prop="keyword" />

@@ -162,6 +162,8 @@ pub struct PresetCategory {
     pub kind: String, // expense | income | account
     pub l1: String,
     pub l2: Option<String>,
+    #[serde(default)]
+    pub l3: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

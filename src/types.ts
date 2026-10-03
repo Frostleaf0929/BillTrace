@@ -111,6 +111,7 @@ export interface PresetCategory {
   kind: string;
   l1: string;
   l2: string | null;
+  l3?: string | null;
 }
 
 export interface PresetPreview {

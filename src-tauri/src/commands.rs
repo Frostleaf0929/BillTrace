@@ -254,6 +254,26 @@ pub fn preset_apply(state: C, preview: PresetPreview) -> Result<(i64, i64), Stri
                     rusqlite::params![c.kind, pid, l2, max_sort + 1],
                 )?;
                 cat_n += n as i64;
+                // 三级（小级）挂在二级之下
+                if let Some(l3) = &c.l3 {
+                    let l2_id: i64 = conn.query_row(
+                        "SELECT id FROM categories WHERE kind=?1 AND parent_id=?2 AND name=?3",
+                        rusqlite::params![c.kind, pid, l2],
+                        |r| r.get(0),
+                    )?;
+                    let max_sort3: i64 = conn
+                        .query_row(
+                            "SELECT IFNULL(MAX(sort),-1) FROM categories WHERE parent_id=?1",
+                            rusqlite::params![l2_id],
+                            |r| r.get(0),
+                        )
+                        .unwrap_or(-1);
+                    let n3 = conn.execute(
+                        "INSERT OR IGNORE INTO categories(kind, parent_id, name, sort) VALUES (?1, ?2, ?3, ?4)",
+                        rusqlite::params![c.kind, l2_id, l3, max_sort3 + 1],
+                    )?;
+                    cat_n += n3 as i64;
+                }
             } else {
                 cat_n += 1; // 一级分类计入
             }

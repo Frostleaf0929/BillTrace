@@ -96,10 +96,10 @@ pub fn export_csv(conn: &Connection, filter: &TxFilter, path: &str) -> Result<us
     Ok(rows.len())
 }
 
-/// 取某 kind 的（一级, 二级）映射对。
-/// categories 是 parent_id 层级树：parent_id 为空即一级，其直接子节点即二级；
-/// 预设导入体系只认两级，更深层级（小级）不参与导出；一级无子项时二级为 None。
-fn category_pairs(conn: &Connection, kind: &str) -> Result<Vec<(String, Option<String>)>, String> {
+/// 取某 kind 的（一级, 二级, 小级）三元组。
+/// categories 是 parent_id 层级树：parent_id 为空即一级，直接子节点即二级，二级的子节点即小级。
+/// 一级无子项时二/三级为 None；二级无子项时三级为 None；父节点缺失的孤儿行按顶层兜底。
+fn category_triples(conn: &Connection, kind: &str) -> Result<Vec<(String, Option<String>, Option<String>)>, String> {
     let mut stmt = conn
         .prepare("SELECT id, parent_id, name FROM categories WHERE kind = ?1 ORDER BY sort, id")
         .map_err(|e| e.to_string())?;
@@ -109,9 +109,14 @@ fn category_pairs(conn: &Connection, kind: &str) -> Result<Vec<(String, Option<S
         .collect::<Result<_, _>>()
         .map_err(|e| e.to_string())?;
     let known: std::collections::HashSet<i64> = rows.iter().map(|(id, _, _)| *id).collect();
-    let mut pairs: Vec<(String, Option<String>)> = Vec::new();
+    let children_of = |pid: i64| -> Vec<(i64, String)> {
+        rows.iter()
+            .filter(|(_, p, _)| p == &Some(pid))
+            .map(|(cid, _, n)| (*cid, n.clone()))
+            .collect()
+    };
+    let mut triples: Vec<(String, Option<String>, Option<String>)> = Vec::new();
     for (id, parent, name) in &rows {
-        // 只从顶层节点带出子项；父节点缺失的孤儿行按顶层处理，避免静默丢数据
         let is_top = match parent {
             None => true,
             Some(p) => !known.contains(p),
@@ -119,32 +124,38 @@ fn category_pairs(conn: &Connection, kind: &str) -> Result<Vec<(String, Option<S
         if !is_top {
             continue;
         }
-        let children: Vec<String> = rows
-            .iter()
-            .filter(|(_, p, _)| p == &Some(*id))
-            .map(|(_, _, n)| n.clone())
-            .collect();
+        let children = children_of(*id);
         if children.is_empty() {
-            pairs.push((name.clone(), None));
+            triples.push((name.clone(), None, None));
         } else {
-            for child in children {
-                pairs.push((name.clone(), Some(child)));
+            for (cid, child) in children {
+                let grandchildren = children_of(cid);
+                if grandchildren.is_empty() {
+                    triples.push((name.clone(), Some(child), None));
+                } else {
+                    for (_, gc) in grandchildren {
+                        triples.push((name.clone(), Some(child.clone()), Some(gc)));
+                    }
+                }
             }
         }
     }
-    Ok(pairs)
+    Ok(triples)
 }
 
 pub(crate) fn categories_txt_string(conn: &Connection) -> Result<String, String> {
     let mut out = String::new();
     for (label, kind) in [("支出", "expense"), ("收入", "income"), ("账户", "account")] {
-        for (l1, l2) in category_pairs(conn, kind)? {
+        for (l1, l2, l3) in category_triples(conn, kind)? {
             // 不用缩进格式：一级名含"支出/收入/账户"（如"购物支出"）会被导入器误判为分区标记；
             // 路径行里的 "/" 会截断层级，换成全角
             let l1 = l1.replace('/', "／");
-            match l2.map(|s| s.replace('/', "／")) {
-                Some(l2) => out.push_str(&format!("{label} > {l1} > {l2}\n")),
-                None => out.push_str(&format!("{label} > {l1}\n")),
+            let l2 = l2.map(|s| s.replace('/', "／"));
+            let l3 = l3.map(|s| s.replace('/', "／"));
+            match (l2, l3) {
+                (Some(l2), Some(l3)) => out.push_str(&format!("{label} > {l1} > {l2} > {l3}\n")),
+                (Some(l2), None) => out.push_str(&format!("{label} > {l1} > {l2}\n")),
+                (None, _) => out.push_str(&format!("{label} > {l1}\n")),
             }
         }
     }
@@ -154,23 +165,24 @@ pub(crate) fn categories_txt_string(conn: &Connection) -> Result<String, String>
 pub(crate) fn categories_md_string(conn: &Connection) -> Result<String, String> {
     let mut md = String::from("# 账单分类体系\n\n");
     for (title, kind) in [("支出分类", "expense"), ("收入分类", "income"), ("账户分类", "account")] {
-        let pairs = category_pairs(conn, kind)?;
-        if pairs.is_empty() {
+        let triples = category_triples(conn, kind)?;
+        if triples.is_empty() {
             continue;
         }
-        md.push_str(&format!("## {title}\n\n| 一级 | 二级 |\n|------|------|\n"));
-        for (l1, l2) in pairs {
+        md.push_str(&format!("## {title}\n\n| 一级 | 二级 | 小级 |\n|------|------|------|\n"));
+        for (l1, l2, l3) in triples {
             // 名称含 "|" 会截断表格列，换成全角
             let l1 = l1.replace('|', "／");
             let l2 = l2.map(|s| s.replace('|', "／")).unwrap_or_else(|| "（留空）".into());
-            md.push_str(&format!("| {l1} | {l2} |\n"));
+            let l3 = l3.map(|s| s.replace('|', "／")).unwrap_or_default();
+            md.push_str(&format!("| {l1} | {l2} | {l3} |\n"));
         }
         md.push('\n');
     }
     Ok(md)
 }
 
-/// 导出分类体系为 txt（"支出 > 一级 > 二级" 路径行，可被预设导入原样解析）
+/// 导出分类体系为 txt（"支出 > 一级 > 二级 > 小级" 路径行，可被预设导入原样解析）
 pub fn export_categories_txt(conn: &Connection, path: &str) -> Result<(), String> {
     let out = categories_txt_string(conn)?;
     std::fs::write(path, out).map_err(|e| format!("保存失败: {e}"))
@@ -188,7 +200,7 @@ mod tests {
     use crate::presets;
     use rusqlite::Connection;
 
-    /// 空库 + 手工插入的样例：支出两棵一级（一棵带二级）、一个三级"外卖"、账户一棵
+    /// 空库 + 手工插入的样例：支出两棵一级（一棵带二级、二级下带一个小级）、账户一棵
     fn sample_db() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
         crate::db::init_db(&conn).unwrap();
@@ -203,7 +215,7 @@ mod tests {
         let food = ins(None, "食品饮料", 1);
         let lunch = ins(Some(food), "早午晚餐", 1);
         ins(Some(food), "饮料费(便利店)", 2);
-        ins(Some(lunch), "外卖", 1); // 三级（小级）：预设体系只认两级，不应出现在导出里
+        ins(Some(lunch), "外卖", 1); // 三级（小级）
         ins(None, "购物支出", 2);
         ins(None, "统计未确认", 3);
         conn.execute(
@@ -220,24 +232,26 @@ mod tests {
         conn
     }
 
-    fn as_tuples(preview: &crate::models::PresetPreview) -> Vec<(String, String, Option<String>)> {
+    type Quad = (String, String, Option<String>, Option<String>);
+
+    fn as_tuples(preview: &crate::models::PresetPreview) -> Vec<Quad> {
         preview
             .categories
             .iter()
-            .map(|c| (c.kind.clone(), c.l1.clone(), c.l2.clone()))
+            .map(|c| (c.kind.clone(), c.l1.clone(), c.l2.clone(), c.l3.clone()))
             .collect()
     }
 
     #[test]
-    fn pairs_cover_two_levels_and_skip_deeper() {
+    fn triples_cover_three_levels() {
         let conn = sample_db();
         assert_eq!(
-            category_pairs(&conn, "expense").unwrap(),
+            category_triples(&conn, "expense").unwrap(),
             vec![
-                ("食品饮料".to_string(), Some("早午晚餐".to_string())),
-                ("食品饮料".to_string(), Some("饮料费(便利店)".to_string())),
-                ("购物支出".to_string(), None),
-                ("统计未确认".to_string(), None),
+                ("食品饮料".to_string(), Some("早午晚餐".to_string()), Some("外卖".to_string())),
+                ("食品饮料".to_string(), Some("饮料费(便利店)".to_string()), None),
+                ("购物支出".to_string(), None, None),
+                ("统计未确认".to_string(), None, None),
             ]
         );
     }
@@ -246,17 +260,17 @@ mod tests {
     fn md_export_round_trips_through_preset_parser() {
         let conn = sample_db();
         let md = categories_md_string(&conn).unwrap();
-        assert!(!md.contains("外卖"), "三级分类不应被导出：{md}");
+        assert!(md.contains("| 食品饮料 | 早午晚餐 | 外卖 |"), "三级应出现在 md 导出里：{md}");
         let preview = presets::parse_md(&md);
         assert!(preview.warnings.is_empty(), "解析不应有告警：{:?}", preview.warnings);
         assert_eq!(
             as_tuples(&preview),
             vec![
-                ("expense".into(), "食品饮料".into(), Some("早午晚餐".into())),
-                ("expense".into(), "食品饮料".into(), Some("饮料费(便利店)".into())),
-                ("expense".into(), "购物支出".into(), None),
-                ("expense".into(), "统计未确认".into(), None),
-                ("account".into(), "现金账户".into(), Some("现金".into())),
+                ("expense".into(), "食品饮料".into(), Some("早午晚餐".into()), Some("外卖".into())),
+                ("expense".into(), "食品饮料".into(), Some("饮料费(便利店)".into()), None),
+                ("expense".into(), "购物支出".into(), None, None),
+                ("expense".into(), "统计未确认".into(), None, None),
+                ("account".into(), "现金账户".into(), Some("现金".into()), None),
             ]
         );
     }
@@ -265,17 +279,17 @@ mod tests {
     fn txt_export_round_trips_through_preset_parser() {
         let conn = sample_db();
         let txt = categories_txt_string(&conn).unwrap();
-        assert!(!txt.contains("外卖"), "三级分类不应被导出：{txt}");
+        assert!(txt.contains("支出 > 食品饮料 > 早午晚餐 > 外卖"), "三级应出现在 txt 导出里：{txt}");
         let preview = presets::parse_txt_file(&txt);
         assert!(preview.warnings.is_empty(), "解析不应有告警：{:?}", preview.warnings);
         assert_eq!(
             as_tuples(&preview),
             vec![
-                ("expense".into(), "食品饮料".into(), Some("早午晚餐".into())),
-                ("expense".into(), "食品饮料".into(), Some("饮料费(便利店)".into())),
-                ("expense".into(), "购物支出".into(), None),
-                ("expense".into(), "统计未确认".into(), None),
-                ("account".into(), "现金账户".into(), Some("现金".into())),
+                ("expense".into(), "食品饮料".into(), Some("早午晚餐".into()), Some("外卖".into())),
+                ("expense".into(), "食品饮料".into(), Some("饮料费(便利店)".into()), None),
+                ("expense".into(), "购物支出".into(), None, None),
+                ("expense".into(), "统计未确认".into(), None, None),
+                ("account".into(), "现金账户".into(), Some("现金".into()), None),
             ]
         );
     }
