@@ -41,31 +41,45 @@ onMounted(async () => {
 });
 
 async function load() {
-  const pending = await api.listPending();
-  const byMerchant = new Map<string, number>();
-  for (const p of pending) byMerchant.set(p.tx.merchant ?? '(空)', (byMerchant.get(p.tx.merchant ?? '(空)') ?? 0) + 1);
-  groups.value = [...byMerchant.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([merchant, count]) => ({
-      merchant,
-      count,
-      l1: merchantHasIncome(pending, merchant) ? '其他收入' : '',
-      l2: null,
-      action: 'assign' as const,
-    }));
-  // 恢复上次未确认的草稿（中途关掉弹窗不丢已选的分类）
+  loading.value = true;
   try {
-    const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? '{}') as Record<string, Pick<Group, 'action' | 'l1' | 'l2'>>;
-    for (const g of groups.value) {
-      const d = draft[g.merchant];
-      if (d) {
-        g.action = d.action;
-        g.l1 = d.l1;
-        g.l2 = d.l2;
+    const pending = await api.listPending();
+    const byMerchant = new Map<string, number>();
+    for (const p of pending) byMerchant.set(p.tx.merchant ?? '(空)', (byMerchant.get(p.tx.merchant ?? '(空)') ?? 0) + 1);
+    groups.value = [...byMerchant.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([merchant, count]) => ({
+        merchant,
+        count,
+        l1: merchantHasIncome(pending, merchant) ? '其他收入' : '',
+        l2: null,
+        action: 'assign' as const,
+      }));
+    page.value = 1;
+    // 恢复上次未确认的草稿（中途关掉弹窗不丢已选的分类）
+    try {
+      const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? '{}') as Record<string, Pick<Group, 'action' | 'l1' | 'l2'>>;
+      for (const g of groups.value) {
+        const d = draft[g.merchant];
+        if (d) {
+          g.action = d.action;
+          g.l1 = d.l1;
+          g.l2 = d.l2;
+        }
       }
-    }
-  } catch { /* 无草稿 */ }
+    } catch { /* 无草稿 */ }
+  } catch (e) {
+    ElMessage.error(String(e));
+  } finally {
+    loading.value = false;
+  }
 }
+
+// 分页渲染：几百个商家时整表渲染会卡（用户验收反馈），每页 15 行
+const loading = ref(false);
+const page = ref(1);
+const PAGE_SIZE = 15;
+const pagedGroups = computed(() => groups.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE));
 
 // 草稿缓存：只要做过的选择就实时落盘，确认成功后才清除
 const DRAFT_KEY = 'zj.pendingDraft';
@@ -123,7 +137,7 @@ defineExpose({ load });
   <el-dialog v-model="visible" title="新商家归类" width="760px" align-center destroy-on-close @open="(() => { load(); emit('opened'); })">
     <el-alert type="info" :closable="false" show-icon style="margin-bottom: 12px"
       title="以下商家是首次出现且没有匹配的自动分类规则。一级分类为必选，二级可选；确认后将自动写入规则，下次导入同类商家自动分类。" />
-    <el-table :data="groups" size="small" max-height="420">
+    <el-table v-loading="loading" :data="pagedGroups" size="small" max-height="420">
       <el-table-column label="商家" prop="merchant" min-width="160" show-overflow-tooltip />
       <el-table-column label="笔数" prop="count" width="60" />
       <el-table-column label="处理" width="90">
@@ -149,6 +163,14 @@ defineExpose({ load });
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-if="groups.length > PAGE_SIZE"
+      v-model:current-page="page"
+      layout="prev, pager, next, total"
+      :total="groups.length"
+      :page-size="PAGE_SIZE"
+      style="margin-top: 10px; justify-content: flex-end"
+    />
     <template #footer>
       <el-button @click="visible = false">稍后处理</el-button>
       <el-button type="primary" @click="confirmAll">确认并沉淀为规则</el-button>

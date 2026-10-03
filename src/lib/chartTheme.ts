@@ -44,7 +44,11 @@ export function chartBase(): echarts.EChartsOption {
       textStyle: { color: tipText, fontSize: 12 },
       extraCssText: 'box-shadow: 0 8px 24px rgba(0,0,0,.14); border-radius: 10px; font-variant-numeric: tabular-nums;',
     },
-    xAxis: { axisTick: { show: false }, axisLabel: { color: label, fontSize: 11 } },
+    xAxis: {
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: split } },
+      axisLabel: { color: label, fontSize: 11 },
+    },
     yAxis: { splitLine: { lineStyle: { color: split } } },
   } as echarts.EChartsOption;
 }

@@ -27,7 +27,6 @@ const navs = [
 
 const activePath = computed(() => '/' + route.path.split('/')[1]);
 const activeIndex = computed(() => navs.findIndex((n) => n.path === activePath.value));
-const pageTitle = computed(() => navs.find((n) => n.path === activePath.value)?.title ?? '账痕');
 
 const footerText = computed(() => {
   const cur = isDark.value ? '深色' : '浅色';
@@ -108,20 +107,13 @@ onUnmounted(() => {
 
 <template>
   <div class="zj-root">
-    <!-- 自绘标题栏（跟随主题） -->
-    <div class="zj-titlebar">
-      <div class="tb-title">
-        <span style="font-weight: 700; color: var(--zj-text)">账痕</span>
-        <span>· {{ pageTitle }}</span>
-      </div>
-      <div class="tb-drag" data-tauri-drag-region @dblclick="appWin.toggleMaximize()" />
-      <div class="tb-btns">
-        <button class="tb-btn" title="最小化" @click="appWin.minimize()"><el-icon><Minus /></el-icon></button>
-        <button class="tb-btn" title="最大化 / 还原" @click="appWin.toggleMaximize()">
-          <svg width="11" height="11" viewBox="0 0 11 11"><rect x="0.5" y="0.5" width="10" height="10" fill="none" stroke="currentColor" /></svg>
-        </button>
-        <button class="tb-btn close" title="关闭" @click="appWin.close()"><el-icon><Close /></el-icon></button>
-      </div>
+    <!-- 悬浮窗口按钮（无标题栏） -->
+    <div class="tb-btns">
+      <button class="tb-btn" title="最小化" @click="appWin.minimize()"><el-icon><Minus /></el-icon></button>
+      <button class="tb-btn" title="最大化 / 还原" @click="appWin.toggleMaximize()">
+        <svg width="11" height="11" viewBox="0 0 11 11"><rect x="0.5" y="0.5" width="10" height="10" fill="none" stroke="currentColor" /></svg>
+      </button>
+      <button class="tb-btn close" title="关闭" @click="appWin.close()"><el-icon><Close /></el-icon></button>
     </div>
 
     <!-- 背景图层（设置里可启用） -->
@@ -158,12 +150,15 @@ onUnmounted(() => {
           <span class="footer-label">{{ footerText }}</span>
         </div>
       </aside>
-      <main class="zj-main" @wheel="onMainWheel">
-        <router-view v-slot="{ Component }">
-          <transition name="fade-slide" mode="out-in">
-            <component :is="Component" @refresh-pending="() => {}" />
-          </transition>
-        </router-view>
+      <main class="zj-content">
+        <div class="zj-content-drag" data-tauri-drag-region @dblclick="appWin.toggleMaximize()" />
+        <div class="zj-content-scroll" @wheel="onMainWheel">
+          <router-view v-slot="{ Component }">
+            <transition name="fade-slide" mode="out-in">
+              <component :is="Component" @refresh-pending="() => {}" />
+            </transition>
+          </router-view>
+        </div>
       </main>
     </div>
   </div>

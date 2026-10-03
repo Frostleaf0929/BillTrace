@@ -103,13 +103,12 @@ body,
   overflow: hidden;
 }
 
-/* 根容器：标题栏 + 内容区纵向排布，内容区弹性占满（滚动正确性依赖此结构） */
+/* 根容器（16px 留白外框布局：外框在 .zj-layout 上） */
 .zj-root {
   height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: inset 0 0 0 1px var(--zj-border);
 }
 
 /* 窗口缩放期间：临时切实底关模糊，避免重排卡顿 */
@@ -163,39 +162,19 @@ html.dark body {
   mix-blend-mode: normal;
 }
 
-/* ---------- 标题栏 ---------- */
-.zj-titlebar {
-  height: 38px;
+/* ---------- 悬浮窗口按钮（无标题栏；窗口拖拽在内容卡顶部拖拽条与侧栏品牌行） ---------- */
+.tb-btns {
+  position: fixed;
+  top: 22px;
+  right: 24px;
+  z-index: 60;
   display: flex;
-  align-items: center;
-  padding: 0 0 0 14px;
-  position: relative;
-  z-index: 5;
-  background: color-mix(in srgb, var(--zj-card-solid) calc(var(--zj-glass-alpha) * 0.55%), transparent);
+  gap: 6px;
 }
 
-.zj-titlebar .tb-title {
-  font-size: 12.5px;
-  color: var(--zj-text-sub);
-  letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.zj-titlebar .tb-drag {
-  flex: 1;
-  height: 100%;
-}
-
-.zj-titlebar .tb-btns {
-  display: flex;
-  height: 100%;
-}
-
-.zj-titlebar .tb-btn {
-  width: 44px;
-  height: 100%;
+.tb-btn {
+  width: 30px;
+  height: 24px;
   border: none;
   background: transparent;
   color: var(--zj-text-sub);
@@ -204,31 +183,34 @@ html.dark body {
   display: grid;
   place-items: center;
   transition: background 0.15s var(--zj-ease), color 0.15s var(--zj-ease);
-  border-radius: 0;
+  border-radius: 8px;
 }
 
-.zj-titlebar .tb-btn:hover {
+.tb-btn:hover {
   background: var(--zj-sidebar-hover);
   color: var(--zj-text);
 }
 
-.zj-titlebar .tb-btn.close:hover {
+.tb-btn.close:hover {
   background: #e5484d;
   color: #fff;
 }
 
-/* ---------- 布局 ---------- */
+/* ---------- 布局（16px 留白外框：侧栏与内容区是两块独立圆角卡） ---------- */
 .zj-layout {
   display: flex;
-  height: calc(100% - 38px);
+  height: 100%;
   position: relative;
   z-index: 1;
+  padding: 16px;
+  gap: 16px;
+  box-sizing: border-box;
 }
 
 .zj-sidebar {
   width: 200px;
   flex-shrink: 0;
-  margin: 10px 0 10px 10px;
+  margin: 0;
   border-radius: 18px;
   background: color-mix(in srgb, var(--zj-card-solid) calc(var(--zj-glass-alpha) * 0.82%), transparent);
   backdrop-filter: var(--zj-glass-blur);
@@ -421,17 +403,57 @@ html.dark .zj-logo .logo-dot {
 }
 
 .zj-main {
+  display: none; /* 已由 .zj-content / .zj-content-scroll 取代（保留类名兼容历史引用） */
+}
+
+/* 内容区：一整块圆角卡。禁止加 backdrop-filter——弹窗挂载其内部，
+   容器带玻璃会把 position:fixed 弹层困住并裁剪（DESIGN-SPEC §1.2） */
+.zj-content {
   flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--zj-border);
+  border-radius: var(--zj-radius);
+  background: color-mix(in srgb, var(--zj-card-solid) 62%, transparent);
+  box-shadow: var(--zj-shadow), var(--zj-inset);
+  overflow: hidden;
+}
+
+.zj-content-drag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  z-index: 5;
+}
+
+.zj-content-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 18px 26px 22px;
+  padding: 18px 22px 20px;
   scroll-behavior: smooth;
+}
+
+/* 固定列投影灰线（用户验收反馈）：去投影、保留吸附 */
+.el-table .el-table-fixed-column--right,
+.el-table .el-table-fixed-column--left,
+.el-table__fixed-right {
+  box-shadow: none !important;
+}
+
+/* 表格行距放开（用户验收反馈） */
+.zj-content-scroll .el-table .el-table__cell {
+  padding: 9px 0;
 }
 
 /* ---------- 卡片与通用 ---------- */
 .zj-card {
-  background: color-mix(in srgb, var(--zj-card-solid) calc(var(--zj-glass-alpha) * 1%), transparent);
-  backdrop-filter: var(--zj-glass-blur);
-  -webkit-backdrop-filter: var(--zj-glass-blur);
+  /* 功能卡实底化（用户验收反馈）：不透明 + 阴影，玻璃只留给侧栏与内容底卡 */
+  background: color-mix(in srgb, var(--zj-card-solid) 97%, transparent);
   border: 1px solid var(--zj-border);
   border-radius: var(--zj-radius);
   box-shadow: var(--zj-shadow), var(--zj-inset);
@@ -439,8 +461,8 @@ html.dark .zj-logo .logo-dot {
   transition: background 0.3s var(--zj-ease), transform 0.25s var(--zj-spring), box-shadow 0.25s var(--zj-ease);
 }
 
-.zj-card.hoverable:hover {
-  /* 悬停三件套（DESIGN-SPEC §5.3）：上浮 + 微放大 + 描边染强调色 */
+.zj-card:hover {
+  /* 悬停三件套（DESIGN-SPEC §5.3）：上浮 + 微放大 + 描边染强调色，引导视线 */
   transform: translateY(-2px) scale(1.005);
   box-shadow: var(--zj-shadow-hover), var(--zj-inset);
   border-color: color-mix(in srgb, var(--zj-primary) 38%, transparent);
