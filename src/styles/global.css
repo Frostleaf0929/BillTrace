@@ -457,6 +457,7 @@ html.dark .zj-logo .logo-dot {
   min-height: 0;
   overflow-y: auto;
   padding: 18px 22px 20px;
+  font-size: 13.5px; /* 正文再小半号（用户验收反馈），与 15px 卡片标题拉开层级 */
   scroll-behavior: smooth;
 }
 
@@ -470,6 +471,64 @@ html.dark .zj-logo .logo-dot {
 /* 表格行距放开（用户验收反馈） */
 .zj-content-scroll .el-table .el-table__cell {
   padding: 9px 0;
+}
+
+/* ---------- 分段选择胶囊化（用户验收反馈：对齐拾刻——无缝拼接、
+   选中强调是小胶囊而非占满整格） ---------- */
+.el-radio-group {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 3px;
+  background: var(--zj-card-hover);
+  border: 1px solid var(--zj-border);
+  border-radius: 999px;
+}
+.el-radio-button {
+  margin: 0;
+  flex: none;
+}
+.el-radio-button__inner {
+  border: none !important;
+  background: transparent;
+  color: var(--zj-text-sub);
+  border-radius: 999px !important;
+  padding: 6px 14px;
+  font-size: 13px;
+  box-shadow: none !important;
+  transition: background 0.18s var(--zj-ease), color 0.18s var(--zj-ease);
+}
+.el-radio-button__inner:hover {
+  color: var(--zj-text);
+}
+.el-radio-button__original-radio:checked + .el-radio-button__inner {
+  background: var(--zj-sidebar-active);
+  color: var(--zj-sidebar-active-text);
+  font-weight: 600;
+}
+
+/* ---------- 方框圆角胶囊化（用户验收反馈） ---------- */
+:root {
+  --el-border-radius-base: 10px;
+}
+.el-button {
+  border-radius: 999px;
+}
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  border-radius: 12px;
+}
+.el-tag {
+  border-radius: 999px;
+}
+.el-alert {
+  border-radius: 12px;
+}
+.el-pagination .el-pager li,
+.el-pagination button.btn-prev,
+.el-pagination button.btn-next {
+  border-radius: 8px;
 }
 
 /* ---------- 卡片与通用 ---------- */
@@ -491,12 +550,16 @@ html.dark .zj-logo .logo-dot {
 }
 
 /* 标题层级（用户验收反馈）：卡片内加粗标题比正文大半号，
-   解决"标题与正文同大小、黑压压一片"的观感 */
+   解决"标题与正文同大小、黑压压一片"的观感；块级标题与正文拉开距离 */
 .zj-card [style*='font-weight: 6'],
 .zj-card [style*='font-weight: 7'],
 .zj-card [style*='font-weight:6'],
 .zj-card [style*='font-weight:7'] {
   font-size: 15px;
+}
+.zj-card div[style*='font-weight: 6'],
+.zj-card div[style*='font-weight: 7'] {
+  margin-bottom: 6px;
 }
 
 .zj-page-title {
