@@ -474,12 +474,12 @@ html.dark .zj-logo .logo-dot {
 }
 
 /* ---------- 分段选择胶囊化（用户验收反馈：对齐拾刻——无缝拼接、
-   选中强调是小胶囊而非占满整格、文字几何居中） ---------- */
+   选中强调是小胶囊而非占满整格、文字几何居中、未选中文字更淡） ---------- */
 .el-radio-group {
   display: inline-flex;
   flex-wrap: nowrap;
-  gap: 4px;
-  padding: 4px;
+  gap: 8px;
+  padding: 5px;
   background: var(--zj-card-hover);
   border: 1px solid var(--zj-border);
   border-radius: 999px;
@@ -492,13 +492,13 @@ html.dark .zj-logo .logo-dot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 26px;
-  padding: 0 16px;
+  height: 28px;
+  padding: 0 20px;
   line-height: 1;
   font-size: 12.5px;
   border: none !important;
   background: transparent;
-  color: var(--zj-text-sub);
+  color: color-mix(in srgb, var(--zj-text-sub) 75%, transparent);
   border-radius: 999px !important;
   box-shadow: none !important;
   transition: background 0.18s var(--zj-ease), color 0.18s var(--zj-ease);
@@ -517,23 +517,56 @@ html.dark .zj-logo .logo-dot {
   --el-segmented-bg-color: var(--zj-card-hover);
   --el-segmented-item-selected-bg-color: var(--zj-sidebar-active);
   --el-segmented-item-selected-color: var(--zj-sidebar-active-text);
-  --el-segmented-color: var(--zj-text-sub);
+  --el-segmented-color: color-mix(in srgb, var(--zj-text-sub) 75%, transparent);
   border: 1px solid var(--zj-border);
   border-radius: 999px;
-  padding: 4px;
+  padding: 5px;
 }
 .el-segmented__group {
-  gap: 4px;
+  gap: 8px;
 }
 .el-segmented__item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 26px;
-  padding: 0 16px;
+  height: 28px;
+  padding: 0 20px;
   line-height: 1;
   font-size: 12.5px;
   border-radius: 999px;
+}
+
+/* 按钮组分段（界面模式等需要保留点击位置的组件）：同款胶囊外观 */
+.seg-group {
+  display: inline-flex;
+  gap: 8px;
+  padding: 5px;
+  background: var(--zj-card-hover);
+  border: 1px solid var(--zj-border);
+  border-radius: 999px;
+}
+.seg-group .el-button {
+  height: 28px;
+  padding: 0 20px;
+  font-size: 12.5px;
+  border: none;
+  background: transparent;
+  color: color-mix(in srgb, var(--zj-text-sub) 75%, transparent);
+  border-radius: 999px;
+  box-shadow: none;
+}
+.seg-group .el-button:hover {
+  background: transparent;
+  color: var(--zj-text);
+}
+.seg-group .el-button--primary {
+  background: var(--zj-sidebar-active);
+  color: var(--zj-sidebar-active-text);
+  font-weight: 600;
+}
+.seg-group .el-button--primary:hover {
+  background: var(--zj-sidebar-active);
+  color: var(--zj-sidebar-active-text);
 }
 
 /* 滑条：EP 滑块手柄在轨道两端会探出约 18px（用户验收反馈：越界/与文字重叠），

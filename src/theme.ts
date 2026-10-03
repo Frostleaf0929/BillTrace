@@ -17,12 +17,12 @@ function applyTheme() {
 // ---------- 个性化外观 ----------
 export interface AccentOption { id: string; name: string; light: string; dark: string }
 export const ACCENTS: AccentOption[] = [
-  { id: 'aurora', name: '极光蓝', light: '#3e63dd', dark: '#7b9aff' },
-  { id: 'mint', name: '薄荷绿', light: '#1f9e6e', dark: '#4cd694' },
-  { id: 'sunset', name: '落日橙', light: '#d97435', dark: '#ffa057' },
-  { id: 'rose', name: '玫瑰红', light: '#c94f6d', dark: '#ff8ba3' },
-  { id: 'violet', name: '雾紫', light: '#8250c4', dark: '#bb8cff' },
-  { id: 'slate', name: '石青灰', light: '#4a5a6f', dark: '#93a6bf' },
+  { id: 'aurora', name: '极光蓝', light: '#6c85d8', dark: '#96aaff' },
+  { id: 'mint', name: '薄荷绿', light: '#63b394', dark: '#7ccbaa' },
+  { id: 'sunset', name: '落日橙', light: '#dd9a63', dark: '#ffb584' },
+  { id: 'rose', name: '玫瑰红', light: '#d3859b', dark: '#f5a3b4' },
+  { id: 'violet', name: '雾紫', light: '#a48ad4', dark: '#c7b3ef' },
+  { id: 'slate', name: '石青灰', light: '#7a8ba0', dark: '#93a6bf' },
 ];
 export const accentId = ref('aurora');
 export const customAccent = ref(''); // 用户自定义色（#rrggbb），设置后优先于预设

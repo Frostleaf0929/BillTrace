@@ -173,7 +173,7 @@ async function openGithub() {
             <div>界面模式</div>
             <div style="color: var(--zj-text-sub); font-size: 12px">以触发位置为圆心辐射切换主题</div>
           </div>
-          <div style="display: flex; gap: 8px">
+          <div style="display: flex; gap: 8px" class="seg-group">
             <el-button
               v-for="m in [{ v: 'system', t: '跟随系统' }, { v: 'light', t: '浅色' }, { v: 'dark', t: '深色' }]"
               :key="m.v"
@@ -383,8 +383,8 @@ async function openGithub() {
   align-items: center;
   gap: 8px;
   min-height: 32px;
-  padding: 0 12px;
-  border-radius: 10px;
+  padding: 0 14px;
+  border-radius: 999px;
   border: 1px solid var(--zj-border);
   background: var(--zj-card-hover);
   cursor: pointer;
