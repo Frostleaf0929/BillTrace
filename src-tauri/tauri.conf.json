@@ -5,7 +5,7 @@
   "identifier": "com.zhangji.app",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:1430",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "账痕",
-        "width": 1280,
-        "height": 820,
-        "minWidth": 960,
-        "minHeight": 640,
+        "width": 1080,
+        "height": 700,
+        "minWidth": 900,
+        "minHeight": 600,
         "center": true,
         "decorations": false,
         "shadow": true

@@ -14,14 +14,27 @@ export function chartToken(name: string, fallback: string): string {
 const LADDER = [1, 0.72, 0.54, 0.4, 0.3, 0.22, 0.16, 0.12];
 
 export function accentLadder(rank: number): string {
-  const accent = chartToken('--zj-primary', '#3e63dd');
+  const accent = chartToken('--zj-primary', '#5570d6');
   const a = LADDER[Math.min(Math.max(rank, 0), LADDER.length - 1)];
-  const hex = accent.replace('#', '');
+  return withAlpha(accent, a);
+}
+
+/** #rrggbb → rgba(r,g,b,a) */
+export function withAlpha(color: string, a: number): string {
+  const hex = color.replace('#', '');
   const n = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
   const r = parseInt(n.slice(0, 2), 16);
   const g = parseInt(n.slice(2, 4), 16);
   const b = parseInt(n.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${a})`;
+}
+
+/** 竖向渐变柱：顶部淡出到底部实色，让单色柱也有层次（用户验收反馈） */
+export function verticalFade(color: string, topAlpha = 0.45): echarts.graphic.LinearGradient {
+  return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+    { offset: 0, color: withAlpha(color, topAlpha) },
+    { offset: 1, color: color },
+  ]);
 }
 
 /** 饼图等需要强区分场景的 10 色柔和去饱和色板（全应用唯一一处系列色定义） */

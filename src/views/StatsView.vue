@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus';
 import { api, fmtAmount } from '../api';
 import ChartCard from '../components/ChartCard.vue';
 import PageSub from '../components/PageSub.vue';
-import { accentLadder, chartBase, chartToken, SOFT_PALETTE } from '../lib/chartTheme';
+import { accentLadder, chartBase, chartToken, SOFT_PALETTE, verticalFade } from '../lib/chartTheme';
 import type { ChartPoint, PiePoint } from '../types';
 import * as echarts from 'echarts';
 
@@ -109,12 +109,12 @@ const trendOption = computed<echarts.EChartsOption>(() => ({
   series: [
     {
       name: '支出', type: 'bar', barWidth: '62%', barMaxWidth: 26, barMinHeight: 1,
-      itemStyle: { color: chartToken('--zj-expense', '#d9424b'), borderRadius: [4, 4, 0, 0] },
+      itemStyle: { color: verticalFade(chartToken('--zj-expense', '#d4849b')), borderRadius: [5, 5, 0, 0] },
       data: barData.value.map((d) => Math.round(d.expense * 100) / 100),
     },
     {
       name: '收入', type: 'bar', barWidth: '62%', barMaxWidth: 26, barMinHeight: 1,
-      itemStyle: { color: chartToken('--zj-income', '#299764'), borderRadius: [4, 4, 0, 0] },
+      itemStyle: { color: verticalFade(chartToken('--zj-income', '#6fae9c')), borderRadius: [5, 5, 0, 0] },
       data: barData.value.map((d) => Math.round(d.income * 100) / 100),
     },
   ],
@@ -144,9 +144,13 @@ const structOption = computed<echarts.EChartsOption>(() => {
         {
           name: pieType.value,
           type: 'pie',
-          radius: ['42%', '68%'],
+          radius: ['50%', '76%'],
           center: ['50%', '50%'],
-          itemStyle: { borderRadius: 6, borderColor: 'transparent', borderWidth: 2 },
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: chartToken('--zj-card-solid', '#ffffff'),
+            borderWidth: 2,
+          },
           label: { show: false },
           data,
         },

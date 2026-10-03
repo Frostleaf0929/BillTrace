@@ -3,30 +3,31 @@
    动效：统一弹性曲线（果冻感），全局一致 */
 
 :root {
-  /* 主色可被个性化覆盖（theme.ts 写入 --zj-primary / --zj-logo-from / --zj-logo-to） */
-  --zj-primary: #3e63dd;
-  --zj-expense: #d9424b;
-  --zj-income: #299764;
-  --zj-transfer: #8e4ec6;
-  --zj-logo-from: #3e63dd;
-  --zj-logo-to: #8e4ec6;
+  /* 主色可被个性化覆盖（theme.ts 写入 --zj-primary / --zj-logo-from / --zj-logo-to）
+     色彩原则（用户验收反馈）：全部中等偏低饱和、柔和去刺激（DESIGN-SPEC §3.4） */
+  --zj-primary: #5570d6;
+  --zj-expense: #d4849b;
+  --zj-income: #6fae9c;
+  --zj-transfer: #9d8fd6;
+  --zj-logo-from: #5570d6;
+  --zj-logo-to: #9d8fd6;
 
-  --zj-bg: #eef0f7;
+  --zj-bg: #f3eef1;
   --zj-card: rgba(255, 255, 255, 0.72);
   --zj-card-solid: #ffffff;
-  --zj-card-hover: rgba(244, 246, 252, 0.9);
+  --zj-card-hover: rgba(250, 246, 248, 0.9);
   --zj-titlebar: rgba(255, 255, 255, 0.4);
 
   --zj-sidebar: rgba(255, 255, 255, 0.55);
-  --zj-sidebar-text: #454b5c;
-  --zj-sidebar-sub: #6b7280;
-  --zj-sidebar-hover: rgba(46, 52, 72, 0.07);
-  --zj-sidebar-active: rgba(62, 99, 221, 0.13);
-  --zj-sidebar-active-text: #2c4bc6;
+  --zj-sidebar-text: #4d5264;
+  --zj-sidebar-sub: #767b8e;
+  --zj-sidebar-hover: rgba(46, 52, 72, 0.06);
+  --zj-sidebar-active: rgba(85, 112, 214, 0.11);
+  --zj-sidebar-active-text: #4a63c0;
   --zj-sidebar-border: rgba(46, 52, 72, 0.08);
 
-  --zj-text: #21242d;
-  --zj-text-sub: #575d6c;
+  --zj-text: #30343f;
+  --zj-text-sub: #71768a;
   --zj-border: rgba(34, 37, 46, 0.1);
   --zj-radius: 16px;
   --zj-shadow:
@@ -58,10 +59,10 @@
 }
 
 html.dark {
-  /* 深色：深海军蓝基调 + 微光渐变，层次比灰黑更丰富 */
-  --zj-expense: #ff7a7d;
-  --zj-income: #4cd694;
-  --zj-transfer: #c49bff;
+  /* 深色：深海军蓝基调 + 微光渐变，层次比灰黑更丰富（同样去饱和） */
+  --zj-expense: #f0929d;
+  --zj-income: #66c39e;
+  --zj-transfer: #b7a3ea;
 
   --zj-bg: #0c0f16;
   --zj-card: rgba(24, 29, 41, 0.66);
@@ -120,8 +121,8 @@ html.resizing {
 body {
   font-family: 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
   background:
-    radial-gradient(1100px 700px at 12% -8%, rgba(62, 99, 221, 0.10) 0%, transparent 55%),
-    radial-gradient(900px 620px at 108% 108%, rgba(142, 78, 198, 0.08) 0%, transparent 55%),
+    radial-gradient(1100px 700px at 12% -8%, rgba(211, 133, 155, 0.16) 0%, transparent 55%),
+    radial-gradient(900px 620px at 108% 108%, rgba(157, 143, 214, 0.12) 0%, transparent 55%),
     var(--zj-bg);
   color: var(--zj-text);
   transition: background 0.35s var(--zj-ease), color 0.35s var(--zj-ease);
@@ -416,7 +417,7 @@ html.dark .zj-logo .logo-dot {
   flex-direction: column;
   border: 1px solid var(--zj-border);
   border-radius: var(--zj-radius);
-  background: color-mix(in srgb, var(--zj-card-solid) 62%, transparent);
+  background: color-mix(in srgb, var(--zj-card-solid) 55%, transparent);
   box-shadow: var(--zj-shadow), var(--zj-inset);
   overflow: hidden;
 }
