@@ -50,27 +50,34 @@ const bgStyle = computed(() => {
   return base;
 });
 
-// ---------- 滚动换页：滚到底继续下滚 → 下一页；页顶上滚 → 上一页 ----------
+// ---------- 滚动换页：页底"持续"下滚 → 下一页；页顶持续上滚 → 上一页 ----------
+// 判定加严（用户验收反馈）：400ms 内累计滚动量 ≥300 才触发，防止轻滚误切
 const wheelNavEnabled = ref(true);
 let wheelCooldown = 0;
+let wheelAcc = 0;
+let wheelAccAt = 0;
 
 function onMainWheel(e: WheelEvent) {
-  if (!wheelNavEnabled.value) return;
   // 弹窗/下拉浮层内的滚动属于弹窗自己，禁止触发换页
   // （否则弹窗内滚到边界会把滚动"接力"给主容器，整页被切走，弹窗随之消失）
   const t = e.target as HTMLElement | null;
   if (t && t.closest('.el-overlay, .el-dialog, .el-message-box, .el-popper, .el-select-dropdown')) return;
+  if (!wheelNavEnabled.value) return;
   const el = e.currentTarget as HTMLElement;
   if (!el) return;
   const now = Date.now();
   if (now < wheelCooldown) return;
+  if (now - wheelAccAt > 400) wheelAcc = 0; // 停顿超过 400ms 重新累计
+  wheelAccAt = now;
+  wheelAcc += e.deltaY;
   const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
   const atTop = el.scrollTop <= 2;
   let target = -1;
-  if (atBottom && e.deltaY > 40) target = activeIndex.value + 1;
-  else if (atTop && e.deltaY < -40) target = activeIndex.value - 1;
+  if (atBottom && wheelAcc >= 300) target = activeIndex.value + 1;
+  else if (atTop && wheelAcc <= -300) target = activeIndex.value - 1;
   if (target < 0 || target >= navs.length || target === activeIndex.value) return;
-  wheelCooldown = now + 1000;
+  wheelAcc = 0;
+  wheelCooldown = now + 800;
   router.push(navs[target].path);
 }
 
@@ -93,6 +100,10 @@ onMounted(async () => {
     collapsed.value = (await api.getSetting('sidebarCollapsed')) === 'true';
     wheelNavEnabled.value = (await api.getSetting('wheelNav')) !== 'false';
   } catch { /* 默认值 */ }
+  // 设置页的滚动换页开关实时同步（此前只在启动时读一次，开关无效）
+  window.addEventListener('zj-wheel-nav', (ev) => {
+    wheelNavEnabled.value = (ev as CustomEvent).detail !== false;
+  });
   unlistenResize = await appWin.onResized(() => {
     document.documentElement.classList.add('resizing');
     clearTimeout(resizeTimer);

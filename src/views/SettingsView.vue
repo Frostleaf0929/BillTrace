@@ -49,8 +49,12 @@ function onModeChange(mode: ThemeMode, e: MouseEvent) {
 
 async function toggleWheelNav(v: boolean | string | number) {
   wheelNav.value = !!v;
-  try { await api.setSetting('wheelNav', String(wheelNav.value)); } catch { /* 忽略 */ }
-  ElMessage.success(wheelNav.value ? '滚动换页已开启' : '滚动换页已关闭');
+  try {
+    await api.setSetting('wheelNav', String(wheelNav.value));
+    // 通知 App.vue 实时生效（此前只写库，运行中的 App 不感知，开关形同虚设）
+    window.dispatchEvent(new CustomEvent('zj-wheel-nav', { detail: wheelNav.value }));
+    ElMessage.success(wheelNav.value ? '滚动换页已开启' : '滚动换页已关闭');
+  } catch { /* 忽略 */ }
 }
 
 async function saveRecentCount() {

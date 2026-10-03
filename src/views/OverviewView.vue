@@ -104,6 +104,7 @@ const dragName = ref('');
 let dragStartX = 0;
 let dragStartY = 0;
 let dragArmed = false;
+let lastSwapAt = 0;
 
 function onChipPointerDown(e: PointerEvent, name: string) {
   if (e.button !== 0) return;
@@ -114,6 +115,7 @@ function onChipPointerDown(e: PointerEvent, name: string) {
   dragStartX = e.clientX;
   dragStartY = e.clientY;
   dragArmed = false;
+  lastSwapAt = 0;
   el.setPointerCapture(e.pointerId);
 }
 
@@ -123,16 +125,25 @@ function onChipPointerMove(e: PointerEvent) {
     if (Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY) < 6) return;
     dragArmed = true;
   }
-  // 指针下的另一个账户块 → 实时交换位置（TransitionGroup 弹簧补位）
+  // 节流：上一次换位的补位动画没走完不判定下一次（否则 FLIP 互相打断，芯片乱飞）
+  const now = Date.now();
+  if (now - lastSwapAt < 130) return;
   const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-acc]') as HTMLElement | null;
   const targetName = el?.dataset.acc;
   if (!targetName || targetName === dragName.value) return;
+  // 指针进入目标中央区域才换位（贴边不换，防止在两块芯片边缘来回抖动）
+  const r = el.getBoundingClientRect();
+  const inCore =
+    e.clientX > r.left + r.width * 0.25 && e.clientX < r.right - r.width * 0.25 &&
+    e.clientY > r.top + r.height * 0.2 && e.clientY < r.bottom - r.height * 0.2;
+  if (!inCore) return;
   const list = sortedBalances().map((a) => a.name);
   const from = list.indexOf(dragName.value);
   const to = list.indexOf(targetName);
   if (from < 0 || to < 0) return;
   list.splice(to, 0, list.splice(from, 1)[0]);
   accountOrder.value = list;
+  lastSwapAt = now;
 }
 
 function onChipPointerUp() {
@@ -481,7 +492,7 @@ function signOf(tx: Tx): string {
   cursor: grab;
   touch-action: none;
   user-select: none;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s var(--zj-ease);
 }
 
 .acc-chip:hover {
@@ -490,8 +501,11 @@ function signOf(tx: Tx): string {
 
 .acc-chip.dragging {
   cursor: grabbing;
-  opacity: 0.55;
-  box-shadow: 0 10px 26px rgba(26, 31, 51, 0.2);
+  transform: scale(1.05);
+  background: var(--zj-card-solid);
+  border-color: var(--zj-primary);
+  box-shadow: 0 12px 30px rgba(26, 31, 51, 0.18);
+  z-index: 2;
 }
 
 .acc-del {
@@ -503,12 +517,13 @@ function signOf(tx: Tx): string {
   opacity: 1;
 }
 
-/* 拖拽排序的弹簧位移动画（TransitionGroup FLIP） */
+/* 拖拽排序的补位动画（TransitionGroup FLIP）：短时长 + 无过冲曲线，
+   连续换位时动画不会互相打断飞出容器（用户验收反馈） */
 .chip-move {
-  transition: transform 0.4s cubic-bezier(0.34, 1.45, 0.5, 1);
+  transition: transform 0.22s var(--zj-ease);
 }
 .chip-enter-active {
-  transition: all 0.35s cubic-bezier(0.34, 1.4, 0.44, 1);
+  transition: all 0.25s var(--zj-ease);
 }
 .chip-leave-active {
   display: none;

@@ -26,8 +26,8 @@
   --zj-sidebar-active-text: #4a63c0;
   --zj-sidebar-border: rgba(46, 52, 72, 0.08);
 
-  --zj-text: #30343f;
-  --zj-text-sub: #71768a;
+  --zj-text: #3c4150;
+  --zj-text-sub: #7d8296;
   --zj-border: rgba(34, 37, 46, 0.1);
   --zj-radius: 16px;
   --zj-shadow:
@@ -43,6 +43,27 @@
   --zj-glass-blur: blur(var(--zj-blur-px)) saturate(180%);
   --zj-spring: cubic-bezier(0.34, 1.4, 0.44, 1);
   --zj-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root {
+  /* Element Plus 组件库主色跟随强调色（用户验收反馈：开关/滑块/按钮不再用默认蓝，
+     个性化页换颜色预设时全局联动） */
+  --el-color-primary: var(--zj-primary);
+  --el-color-primary-dark-2: color-mix(in srgb, var(--zj-primary) 80%, #000);
+  --el-color-primary-light-3: color-mix(in srgb, var(--zj-primary) 70%, #fff);
+  --el-color-primary-light-5: color-mix(in srgb, var(--zj-primary) 50%, #fff);
+  --el-color-primary-light-7: color-mix(in srgb, var(--zj-primary) 30%, #fff);
+  --el-color-primary-light-8: color-mix(in srgb, var(--zj-primary) 20%, #fff);
+  --el-color-primary-light-9: color-mix(in srgb, var(--zj-primary) 10%, #fff);
+}
+
+html.dark {
+  --el-color-primary-dark-2: color-mix(in srgb, var(--zj-primary) 80%, #fff);
+  --el-color-primary-light-3: color-mix(in srgb, var(--zj-primary) 70%, #14181f);
+  --el-color-primary-light-5: color-mix(in srgb, var(--zj-primary) 50%, #14181f);
+  --el-color-primary-light-7: color-mix(in srgb, var(--zj-primary) 30%, #14181f);
+  --el-color-primary-light-8: color-mix(in srgb, var(--zj-primary) 20%, #14181f);
+  --el-color-primary-light-9: color-mix(in srgb, var(--zj-primary) 10%, #14181f);
 }
 
 /* 批量操作条 / 徽标出入场 */
@@ -119,7 +140,7 @@ html.resizing {
 }
 
 body {
-  font-family: 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
+  font-family: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', system-ui, sans-serif;
   background:
     radial-gradient(1100px 700px at 12% -8%, rgba(211, 133, 155, 0.16) 0%, transparent 55%),
     radial-gradient(900px 620px at 108% 108%, rgba(157, 143, 214, 0.12) 0%, transparent 55%),
@@ -467,6 +488,15 @@ html.dark .zj-logo .logo-dot {
   transform: translateY(-2px) scale(1.005);
   box-shadow: var(--zj-shadow-hover), var(--zj-inset);
   border-color: color-mix(in srgb, var(--zj-primary) 38%, transparent);
+}
+
+/* 标题层级（用户验收反馈）：卡片内加粗标题比正文大半号，
+   解决"标题与正文同大小、黑压压一片"的观感 */
+.zj-card [style*='font-weight: 6'],
+.zj-card [style*='font-weight: 7'],
+.zj-card [style*='font-weight:6'],
+.zj-card [style*='font-weight:7'] {
+  font-size: 15px;
 }
 
 .zj-page-title {
