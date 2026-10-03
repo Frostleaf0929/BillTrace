@@ -402,6 +402,14 @@ async function openGithub() {
   box-shadow: 0 0 0 1px var(--zj-primary);
 }
 
+/* 自定义色输入/取色器胶囊化（用户验收反馈：个性化·颜色卡里不许有方框） */
+.accent-chip :deep(.el-input__wrapper) {
+  border-radius: 999px;
+}
+:deep(.el-color-picker__trigger) {
+  border-radius: 999px;
+}
+
 .accent-dot {
   width: 14px;
   height: 14px;

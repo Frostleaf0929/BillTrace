@@ -488,28 +488,34 @@ html.dark .zj-logo .logo-dot {
   margin: 0;
   flex: none;
 }
-.el-radio-button__inner {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  padding: 0 20px;
-  line-height: 1;
-  font-size: 12.5px;
+/* 关键：EP 用 outline（轮廓线）画未选中项的小框、用 is-active 长选择器画选中实心，
+   必须全部 !important 压掉（前两轮只杀了 border/box-shadow，outline 漏网） */
+.el-radio-group .el-radio-button__inner {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 28px !important;
+  padding: 0 20px !important;
+  line-height: 1 !important;
+  font-size: 12.5px !important;
+  outline: none !important;
   border: none !important;
-  background: transparent;
-  color: color-mix(in srgb, var(--zj-text-sub) 75%, transparent);
-  border-radius: 999px !important;
+  background: transparent !important;
   box-shadow: none !important;
+  color: color-mix(in srgb, var(--zj-text-sub) 75%, transparent) !important;
+  border-radius: 999px !important;
   transition: background 0.18s var(--zj-ease), color 0.18s var(--zj-ease);
 }
-.el-radio-button__inner:hover {
-  color: var(--zj-text);
+.el-radio-group .el-radio-button__inner:hover {
+  color: var(--zj-text) !important;
 }
-.el-radio-button__original-radio:checked + .el-radio-button__inner {
-  background: var(--zj-sidebar-active);
-  color: var(--zj-sidebar-active-text);
-  font-weight: 600;
+.el-radio-group .el-radio-button.is-active .el-radio-button__inner,
+.el-radio-group .el-radio-button__original-radio:checked + .el-radio-button__inner {
+  background: var(--zj-sidebar-active) !important;
+  color: var(--zj-sidebar-active-text) !important;
+  font-weight: 600 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* el-segmented（概览卡的 日/月/年 等）与 radio 分段同款外观 */
@@ -589,6 +595,9 @@ html.dark .zj-logo .logo-dot {
   border-radius: 12px;
 }
 .el-tag {
+  border-radius: 999px;
+}
+.el-color-picker__trigger {
   border-radius: 999px;
 }
 .el-alert {
