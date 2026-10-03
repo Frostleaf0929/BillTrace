@@ -474,12 +474,12 @@ html.dark .zj-logo .logo-dot {
 }
 
 /* ---------- 分段选择胶囊化（用户验收反馈：对齐拾刻——无缝拼接、
-   选中强调是小胶囊而非占满整格） ---------- */
+   选中强调是小胶囊而非占满整格、文字几何居中） ---------- */
 .el-radio-group {
   display: inline-flex;
   flex-wrap: nowrap;
-  gap: 2px;
-  padding: 3px;
+  gap: 4px;
+  padding: 4px;
   background: var(--zj-card-hover);
   border: 1px solid var(--zj-border);
   border-radius: 999px;
@@ -489,12 +489,17 @@ html.dark .zj-logo .logo-dot {
   flex: none;
 }
 .el-radio-button__inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 16px;
+  line-height: 1;
+  font-size: 12.5px;
   border: none !important;
   background: transparent;
   color: var(--zj-text-sub);
   border-radius: 999px !important;
-  padding: 6px 14px;
-  font-size: 13px;
   box-shadow: none !important;
   transition: background 0.18s var(--zj-ease), color 0.18s var(--zj-ease);
 }
@@ -505,6 +510,37 @@ html.dark .zj-logo .logo-dot {
   background: var(--zj-sidebar-active);
   color: var(--zj-sidebar-active-text);
   font-weight: 600;
+}
+
+/* el-segmented（概览卡的 日/月/年 等）与 radio 分段同款外观 */
+.el-segmented {
+  --el-segmented-bg-color: var(--zj-card-hover);
+  --el-segmented-item-selected-bg-color: var(--zj-sidebar-active);
+  --el-segmented-item-selected-color: var(--zj-sidebar-active-text);
+  --el-segmented-color: var(--zj-text-sub);
+  border: 1px solid var(--zj-border);
+  border-radius: 999px;
+  padding: 4px;
+}
+.el-segmented__group {
+  gap: 4px;
+}
+.el-segmented__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 16px;
+  line-height: 1;
+  font-size: 12.5px;
+  border-radius: 999px;
+}
+
+/* 滑条：EP 滑块手柄在轨道两端会探出约 18px（用户验收反馈：越界/与文字重叠），
+   给两侧留出呼吸位 */
+.el-slider {
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 /* ---------- 方框圆角胶囊化（用户验收反馈） ---------- */

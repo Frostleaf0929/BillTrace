@@ -450,14 +450,7 @@ function signOf(tx: Tx): string {
   color: var(--zj-text-sub);
   font-size: 12px;
 }
-/* 年/月/日切换字号缩小 */
-.ov-card-foot :deep(.el-segmented) {
-  --el-segmented-font-size: 10px;
-  --el-segmented-item-selected-bg-color: var(--zj-primary);
-}
-.ov-card-foot :deep(.el-segmented__group) {
-  padding: 1px;
-}
+/* 年/月/日切换：外观已由全局分段样式统一，此处不再单独覆盖 */
 .ov-card-foot :deep(.el-segmented__item) {
   padding: 0 6px;
   line-height: 17px;
