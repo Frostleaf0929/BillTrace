@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus';
 import { api, fmtAmount } from '../api';
 import ChartCard from '../components/ChartCard.vue';
 import PageSub from '../components/PageSub.vue';
-import { accentLadder, chartBase, chartToken, SOFT_PALETTE } from '../lib/chartTheme';
+import { accentLadder, chartBase, chartToken } from '../lib/chartTheme';
 import type { ChartPoint, PiePoint } from '../types';
 import * as echarts from 'echarts';
 
@@ -42,6 +42,11 @@ const structRef = ref<InstanceType<typeof ChartCard>>();
 function p(n: number) { return String(n).padStart(2, '0'); }
 function fdate(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// 环形图同色系：最大块炭黑 #222026，其余淡紫阶梯（Zona Pro 家族色）
+function donutColor(i: number): string {
+  return i === 0 ? '#222026' : accentLadder(i - 1);
 }
 
 function setDefaultRange() {
@@ -218,20 +223,32 @@ const legendItems = computed(() =>
   pieData.value.slice(0, 12).map((d, i) => ({
     name: d.name,
     value: d.value,
-    color: chartKind.value === 'pie' ? SOFT_PALETTE[i % SOFT_PALETTE.length] : accentLadder(i),
+    color: chartKind.value === 'pie' ? donutColor(i) : accentLadder(i),
   }))
 );
 
 const structOption = computed<echarts.EChartsOption>(() => {
   const data = pieData.value.map((d) => ({ name: d.name, value: Math.round(d.value * 100) / 100 }));
   if (chartKind.value === 'pie') {
+    // 环形图（POS 范式）：同色系家族（最大块炭黑 + 淡紫阶梯）、中心合计、白色胶囊 % 徽章。
+    // 注意：不铺 chartBase 的坐标轴组件——饼图不需要，否则会隐式画出轴线（左侧竖线 bug）。
+    const total = data.reduce((sum, d) => sum + d.value, 0);
     return {
-      ...chartBase(),
-      color: SOFT_PALETTE,
+      backgroundColor: 'transparent',
+      animation: false,
+      color: data.map((_, i) => donutColor(i)),
       tooltip: {
         ...chartBase().tooltip,
         trigger: 'item',
         formatter: '{b}<br/>¥{c}（{d}%）',
+      },
+      title: {
+        text: `¥ ${fmtAmount(total)}`,
+        subtext: '合计',
+        left: 'center',
+        top: '41%',
+        textStyle: { fontSize: 22, fontWeight: 700, color: chartToken('--zj-text', '#3c4150') },
+        subtextStyle: { fontSize: 12, color: chartToken('--zj-text-sub', '#7d8296') },
       },
       series: [
         {
@@ -248,8 +265,13 @@ const structOption = computed<echarts.EChartsOption>(() => {
             show: true,
             position: 'inside',
             formatter: '{d}%',
-            color: '#fff',
-            fontSize: 11,
+            color: '#222026',
+            backgroundColor: '#ffffff',
+            borderColor: 'rgba(34,37,46,0.08)',
+            borderWidth: 1,
+            borderRadius: 999,
+            padding: [3, 7],
+            fontSize: 10.5,
             fontWeight: 600,
           },
           labelLayout: { hideOverlap: true },
