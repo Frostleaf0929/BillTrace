@@ -586,7 +586,14 @@ pub fn clear_background(state: C) -> Result<(), String> {
 pub fn stats_summary(state: C) -> Result<SummaryStats, String> {
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let month = chrono::Local::now().format("%Y-%m").to_string();
-    with_conn(&state, |conn| stats::summary(conn, &today, &month)).map_err(|e| e.to_string())
+    let yesterday = (chrono::Local::now() - chrono::Duration::days(1))
+        .format("%Y-%m-%d")
+        .to_string();
+    let prev_month = (chrono::Local::now() - chrono::Duration::days(1))
+        .format("%Y-%m")
+        .to_string();
+    with_conn(&state, |conn| stats::summary(conn, &today, &month, &yesterday, &prev_month))
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

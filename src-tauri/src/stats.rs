@@ -5,7 +5,13 @@ use chrono::{Datelike, NaiveDate};
 use crate::models::{ChartPoint, PiePoint, SummaryStats};
 
 /// 转账/报销/代付等不计入收支统计，仅支出/收入参与
-pub fn summary(conn: &rusqlite::Connection, today: &str, month_prefix: &str) -> rusqlite::Result<SummaryStats> {
+pub fn summary(
+    conn: &rusqlite::Connection,
+    today: &str,
+    month_prefix: &str,
+    yesterday: &str,
+    prev_month_prefix: &str,
+) -> rusqlite::Result<SummaryStats> {
     let year_prefix = &today[..4];
     let q = |cond: &str, params: &[&dyn rusqlite::ToSql]| -> rusqlite::Result<f64> {
         let sql = format!(
@@ -19,13 +25,31 @@ pub fn summary(conn: &rusqlite::Connection, today: &str, month_prefix: &str) -> 
     let month_income = q("substr(tx_time,1,7) = ?2", &[&"收入", &month_prefix])?;
     let year_expense = q("substr(tx_time,1,4) = ?2", &[&"支出", &year_prefix])?;
     let year_income = q("substr(tx_time,1,4) = ?2", &[&"收入", &year_prefix])?;
+    // 上期对比（概览卡趋势箭头）：昨日 / 上月
+    let yesterday_expense = q("substr(tx_time,1,10) = ?2", &[&"支出", &yesterday])?;
+    let yesterday_income = q("substr(tx_time,1,10) = ?2", &[&"收入", &yesterday])?;
+    let prev_month_expense = q("substr(tx_time,1,7) = ?2", &[&"支出", &prev_month_prefix])?;
+    let prev_month_income = q("substr(tx_time,1,7) = ?2", &[&"收入", &prev_month_prefix])?;
     let month_transfer: f64 = conn.query_row(
         "SELECT IFNULL(SUM(amount),0) FROM transactions WHERE tx_type = '转账' AND substr(tx_time,1,7) = ?1",
         rusqlite::params![month_prefix],
         |r| r.get(0),
     )?;
     let tx_count: i64 = conn.query_row("SELECT COUNT(*) FROM transactions", [], |r| r.get(0))?;
-    Ok(SummaryStats { today_expense, today_income, month_expense, month_income, year_expense, year_income, month_transfer, tx_count })
+    Ok(SummaryStats {
+        today_expense,
+        today_income,
+        month_expense,
+        month_income,
+        year_expense,
+        year_income,
+        month_transfer,
+        tx_count,
+        yesterday_expense,
+        yesterday_income,
+        prev_month_expense,
+        prev_month_income,
+    })
 }
 
 /// 柱状图数据：dimension = day|month|year

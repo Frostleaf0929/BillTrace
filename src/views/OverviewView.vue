@@ -84,6 +84,28 @@ const card2Value = () =>
   ovRange.value === 'day' ? summary.value?.today_income ?? 0
     : ovRange.value === 'month' ? summary.value?.month_income ?? 0
     : summary.value?.year_income ?? 0;
+
+// 概览卡趋势箭头（POS 范式）：日 vs 昨日、月 vs 上月；年无上期不显示
+function prevLabel(): string {
+  return ovRange.value === 'day' ? '昨日' : '上月';
+}
+function trendPct(kind: 'expense' | 'income'): number | null {
+  const s = summary.value;
+  if (!s) return null;
+  let cur = 0;
+  let prev = 0;
+  if (ovRange.value === 'day') {
+    cur = kind === 'expense' ? s.today_expense : s.today_income;
+    prev = kind === 'expense' ? s.yesterday_expense ?? 0 : s.yesterday_income ?? 0;
+  } else if (ovRange.value === 'month') {
+    cur = kind === 'expense' ? s.month_expense : s.month_income;
+    prev = kind === 'expense' ? s.prev_month_expense ?? 0 : s.prev_month_income ?? 0;
+  } else {
+    return null;
+  }
+  if (prev <= 0) return null;
+  return Math.round(((cur - prev) / prev) * 100);
+}
 const card3Value = () => balances.value.reduce((s, a) => s + a.balance, 0);
 
 // 账户排序持久化
@@ -239,44 +261,46 @@ function signOf(tx: Tx): string {
 
     <div class="zj-row" style="margin-bottom: 14px">
       <div class="zj-card ov-card" style="flex: 1">
-        <div class="ov-card-head">
-          <span class="ov-card-title"><el-icon><Coin /></el-icon> 支出</span>
+        <div class="ov-card-head" style="align-items: center">
+          <span class="stat-chip"><el-icon><Coin /></el-icon></span>
+          <span class="stat-title">支出</span>
         </div>
-        <div class="zj-amount-expense zj-num ov-card-num">¥ {{ fmtAmount(card1Value()) }}</div>
-        <div class="ov-card-foot">
-          <span class="ov-card-sub">{{ RANGE_LABEL[ovRange] }}支出</span>
-          <el-segmented
-            :model-value="ovRange"
-            :options="[{ label: '日', value: 'day' }, { label: '月', value: 'month' }, { label: '年', value: 'year' }]"
-            size="small"
-            @change="(v: any) => setOvRange(v)"
-          />
-        </div>
-      </div>
-      <div class="zj-card ov-card" style="flex: 1">
-        <div class="ov-card-head">
-          <span class="ov-card-title"><el-icon><Money /></el-icon> 收入</span>
-        </div>
-        <div class="zj-amount-income zj-num ov-card-num">¥ {{ fmtAmount(card2Value()) }}</div>
-        <div class="ov-card-foot">
-          <span class="ov-card-sub">{{ RANGE_LABEL[ovRange] }}收入</span>
-          <el-segmented
-            :model-value="ovRange"
-            :options="[{ label: '日', value: 'day' }, { label: '月', value: 'month' }, { label: '年', value: 'year' }]"
-            size="small"
-            @change="(v: any) => setOvRange(v)"
-          />
+        <div class="stat-num zj-num" style="color: var(--zj-expense)">¥ {{ fmtAmount(card1Value()) }}</div>
+        <div class="stat-foot">
+          <span class="stat-vs">{{ RANGE_LABEL[ovRange] }}支出<template v-if="trendPct('expense') !== null"> · 较{{ prevLabel() }}</template></span>
+          <span
+            v-if="trendPct('expense') !== null"
+            class="stat-trend"
+            :class="trendPct('expense')! > 0 ? 'bad' : 'good'"
+          >{{ trendPct('expense')! > 0 ? '↑' : '↓' }} {{ Math.abs(trendPct('expense')!) }}%</span>
         </div>
       </div>
       <div class="zj-card ov-card" style="flex: 1">
-        <div class="ov-card-head">
-          <span class="ov-card-title"><el-icon><Wallet /></el-icon> 账户总额</span>
+        <div class="ov-card-head" style="align-items: center">
+          <span class="stat-chip"><el-icon><Money /></el-icon></span>
+          <span class="stat-title">收入</span>
         </div>
-        <div class="zj-num ov-card-num" :style="{ color: card3Value() < 0 ? 'var(--zj-expense)' : 'var(--zj-text)' }">
+        <div class="stat-num zj-num" style="color: var(--zj-income)">¥ {{ fmtAmount(card2Value()) }}</div>
+        <div class="stat-foot">
+          <span class="stat-vs">{{ RANGE_LABEL[ovRange] }}收入<template v-if="trendPct('income') !== null"> · 较{{ prevLabel() }}</template></span>
+          <span
+            v-if="trendPct('income') !== null"
+            class="stat-trend"
+            :class="trendPct('income')! >= 0 ? 'good' : 'bad'"
+          >{{ trendPct('income')! >= 0 ? '↑' : '↓' }} {{ Math.abs(trendPct('income')!) }}%</span>
+        </div>
+      </div>
+      <div class="zj-card ov-card" style="flex: 1">
+        <div class="ov-card-head" style="align-items: center">
+          <span class="stat-chip"><el-icon><Wallet /></el-icon></span>
+          <span class="stat-title">账户总额</span>
+        </div>
+        <div class="stat-num zj-num" :style="{ color: card3Value() < 0 ? 'var(--zj-expense)' : 'var(--zj-text)' }">
           ¥ {{ fmtAmount(card3Value()) }}
         </div>
-        <div class="ov-card-foot">
-          <span class="ov-card-sub">全部账户余额合计</span>
+        <div class="stat-foot">
+          <span class="stat-vs">{{ balances.length }} 个账户</span>
+          <div style="flex: 1" />
           <el-segmented
             :model-value="ovRange"
             :options="[{ label: '日', value: 'day' }, { label: '月', value: 'month' }, { label: '年', value: 'year' }]"
@@ -296,13 +320,13 @@ function signOf(tx: Tx): string {
       </div>
     </div>
 
-    <!-- 本月总预算执行卡（未设预算时显示引导） -->
-    <div v-if="monthBudget" class="zj-card" style="margin-bottom: 14px">
+    <!-- 本月总预算执行卡（深色锚点卡，Zona Pro #222026；未设预算时显示引导） -->
+    <div v-if="monthBudget" class="zj-card zj-anchor" style="margin-bottom: 14px">
       <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap">
-        <span style="font-weight: 600">本月预算</span>
+        <span class="stat-title">本月预算</span>
         <span
           class="zj-num"
-          :style="{ color: monthBudget.spent > monthBudget.amount ? 'var(--zj-expense)' : 'var(--zj-text)' }"
+          :style="{ color: monthBudget.spent > monthBudget.amount ? '#f0929d' : '#f5f6fa' }"
           style="font-size: 20px; font-weight: 700"
         >¥ {{ fmtAmount(monthBudget.spent) }}</span>
         <span class="zj-num" style="color: var(--zj-text-sub); font-size: 12.5px">

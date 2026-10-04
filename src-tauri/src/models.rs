@@ -176,6 +176,14 @@ pub struct SummaryStats {
     pub year_income: f64,
     pub month_transfer: f64,
     pub tx_count: i64,
+    #[serde(default)]
+    pub yesterday_expense: f64,
+    #[serde(default)]
+    pub yesterday_income: f64,
+    #[serde(default)]
+    pub prev_month_expense: f64,
+    #[serde(default)]
+    pub prev_month_income: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

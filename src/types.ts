@@ -129,6 +129,10 @@ export interface SummaryStats {
   year_income: number;
   month_transfer: number;
   tx_count: number;
+  yesterday_expense?: number;
+  yesterday_income?: number;
+  prev_month_expense?: number;
+  prev_month_income?: number;
 }
 
 export interface ChartPoint {

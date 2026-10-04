@@ -28,8 +28,33 @@ const groupLabel = computed(() => GROUP_OPTIONS.find((o) => o.value === groupBy.
 const dateFrom = ref('');
 const dateTo = ref('');
 const barData = ref<ChartPoint[]>([]);
+const prevBarData = ref<ChartPoint[]>([]); // 上期同期（幽灵柱）
 const pieData = ref<PiePoint[]>([]);
 const loadError = ref('');
+
+function shiftDate(d: Date, days: number): string {
+  const nd = new Date(d.getTime() + days * 86400000);
+  return `${nd.getFullYear()}-${p(nd.getMonth() + 1)}-${p(nd.getDate())}`;
+}
+
+async function load() {
+  if (!dateFrom.value || !dateTo.value) return;
+  loadError.value = '';
+  try {
+    barData.value = await api.statsChart(dimension.value, dateFrom.value, dateTo.value);
+    pieData.value = await api.statsPie(pieType.value, dateFrom.value, dateTo.value, groupBy.value);
+    // 上期同期：区间整体向前平移一个等长周期（POS 幽灵柱对比）
+    const from = new Date(dateFrom.value);
+    const span = Math.max(1, Math.round((new Date(dateTo.value).getTime() - from.getTime()) / 86400000) + 1);
+    prevBarData.value = await api.statsChart(dimension.value, shiftDate(from, -span), shiftDate(from, -1));
+  } catch (e) {
+    loadError.value = String(e);
+    barData.value = [];
+    prevBarData.value = [];
+    pieData.value = [];
+    ElMessage.error(`统计数据加载失败：${e}`);
+  }
+}
 
 const trendRef = ref<InstanceType<typeof ChartCard>>();
 const structRef = ref<InstanceType<typeof ChartCard>>();
@@ -56,20 +81,6 @@ function onDimensionChange() {
   setDefaultRange();
 }
 
-async function load() {
-  if (!dateFrom.value || !dateTo.value) return;
-  loadError.value = '';
-  try {
-    barData.value = await api.statsChart(dimension.value, dateFrom.value, dateTo.value);
-    pieData.value = await api.statsPie(pieType.value, dateFrom.value, dateTo.value, groupBy.value);
-  } catch (e) {
-    loadError.value = String(e);
-    barData.value = [];
-    pieData.value = [];
-    ElMessage.error(`统计数据加载失败：${e}`);
-  }
-}
-
 onMounted(() => {
   setDefaultRange();
   load();
@@ -77,48 +88,70 @@ onMounted(() => {
 
 watch([dimension, dateFrom, dateTo, groupBy, pieType], load);
 
-// ── 第 2 层：收支趋势柱状图（颜色走语义 token，图例自绘在卡片标题行）──
-const trendOption = computed<echarts.EChartsOption>(() => ({
-  ...chartBase(),
-  grid: { left: 4, right: 12, top: 14, bottom: barData.value.length > 40 ? 56 : 0, containLabel: true },
-  dataZoom: barData.value.length > 40 ? [{ type: 'slider', height: 16, bottom: 6, borderColor: 'transparent' }] : [],
-  tooltip: {
-    ...chartBase().tooltip,
-    trigger: 'axis',
-    valueFormatter: (v) => `¥ ${fmtAmount(Number(v))}`,
-  },
-  xAxis: {
-    ...chartBase().xAxis,
-    type: 'category',
-    data: barData.value.map((d) => d.label),
-    axisLabel: {
-      color: chartToken('--zj-text-sub', '#575d6c'),
-      fontSize: 11,
-      rotate: barData.value.length > 12 ? 40 : 0,
+// ── 第 2 层：收支趋势柱状图（POS 范式：上期斜纹幽灵柱 + 峰值炭黑高亮，图例自绘）──
+const trendOption = computed<echarts.EChartsOption>(() => {
+  const peakIdx = barData.value.reduce((mi, d, i, arr) => (d.expense > arr[mi].expense ? i : mi), 0);
+  // 幽灵柱与当期柱按索引对齐；上期条数不足时补零
+  const ghost = barData.value.map((_, i) => Math.round((prevBarData.value[i]?.expense ?? 0) * 100) / 100);
+  return {
+    ...chartBase(),
+    grid: { left: 4, right: 12, top: 14, bottom: barData.value.length > 40 ? 56 : 0, containLabel: true },
+    dataZoom: [
+      ...(barData.value.length > 40 ? [{ type: 'slider', height: 16, bottom: 6, borderColor: 'transparent' }] : []),
+      { type: 'inside' }, // 滚轮缩放（FusionTime 范式）
+    ],
+    tooltip: {
+      ...chartBase().tooltip,
+      trigger: 'axis',
+      valueFormatter: (v) => `¥ ${fmtAmount(Number(v))}`,
     },
-  },
-  yAxis: {
-    ...chartBase().yAxis,
-    type: 'value',
-    axisLabel: {
-      color: chartToken('--zj-text-sub', '#575d6c'),
-      fontSize: 11,
-      formatter: (v: number) => (Math.abs(v) >= 10000 ? `${(v / 10000).toFixed(1)}万` : String(v)),
+    xAxis: {
+      ...chartBase().xAxis,
+      type: 'category',
+      data: barData.value.map((d) => d.label),
+      axisLabel: {
+        color: chartToken('--zj-text-sub', '#71768a'),
+        fontSize: 11,
+        rotate: barData.value.length > 12 ? 40 : 0,
+      },
     },
-  },
-  series: [
-    {
-      name: '支出', type: 'bar', barWidth: '62%', barMaxWidth: 26, barMinHeight: 1,
-      itemStyle: { color: verticalFade(chartToken('--zj-expense', '#d4849b')), borderRadius: [5, 5, 0, 0] },
-      data: barData.value.map((d) => Math.round(d.expense * 100) / 100),
+    yAxis: {
+      ...chartBase().yAxis,
+      type: 'value',
+      axisLabel: {
+        color: chartToken('--zj-text-sub', '#71768a'),
+        fontSize: 11,
+        formatter: (v: number) => (Math.abs(v) >= 10000 ? `${(v / 10000).toFixed(1)}万` : String(v)),
+      },
     },
-    {
-      name: '收入', type: 'bar', barWidth: '62%', barMaxWidth: 26, barMinHeight: 1,
-      itemStyle: { color: verticalFade(chartToken('--zj-income', '#6fae9c')), borderRadius: [5, 5, 0, 0] },
-      data: barData.value.map((d) => Math.round(d.income * 100) / 100),
-    },
-  ],
-} as echarts.EChartsOption));
+    series: [
+      {
+        name: '上期支出', type: 'bar', barWidth: '62%', barMaxWidth: 26, barGap: '-100%', barMinHeight: 1, z: 1,
+        itemStyle: {
+          color: 'rgba(135,127,193,0.22)',
+          borderRadius: [5, 5, 0, 0],
+          decal: { symbol: 'rect', dashArrayX: [2, 0], dashArrayY: [2, 4], rotation: Math.PI / 6 },
+        },
+        data: ghost,
+      },
+      {
+        name: '支出', type: 'bar', barWidth: '62%', barMaxWidth: 26, barMinHeight: 1, z: 2,
+        itemStyle: { color: verticalFade(chartToken('--zj-expense', '#d4849b')), borderRadius: [5, 5, 0, 0] },
+        data: barData.value.map((d, i) => ({
+          value: Math.round(d.expense * 100) / 100,
+          itemStyle: i === peakIdx && barData.value.length > 1
+            ? { color: '#222026', borderRadius: [5, 5, 0, 0] }
+            : undefined,
+        })),
+      },
+      {
+        name: '收入', type: 'bar', barWidth: '62%', barMaxWidth: 26, barMinHeight: 1, z: 2,
+        itemStyle: { color: verticalFade(chartToken('--zj-income', '#6fae9c')), borderRadius: [5, 5, 0, 0] },
+        data: barData.value.map((d) => Math.round(d.income * 100) / 100),
+      },
+    ],
+  } as echarts.EChartsOption;
+});
 
 // ── 第 3 层：结构图（按维度）；排行条形用强调色阶梯，饼图用柔和色板，图例自绘 ──
 const legendItems = computed(() =>
@@ -151,7 +184,15 @@ const structOption = computed<echarts.EChartsOption>(() => {
             borderColor: chartToken('--zj-card-solid', '#ffffff'),
             borderWidth: 2,
           },
-          label: { show: false },
+          label: {
+            show: true,
+            position: 'inside',
+            formatter: '{d}%',
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: 600,
+          },
+          labelLayout: { hideOverlap: true },
           data,
         },
       ],
@@ -241,6 +282,7 @@ async function exportBoth() {
       <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px">
         <span style="font-weight: 600">收支趋势 · {{ { year: '按年', month: '按月', day: '按日' }[dimension] }}（{{ dateFrom }} ~ {{ dateTo }}）</span>
         <span class="chart-legend">
+          <span class="chart-legend-item"><i class="dot" style="background: rgba(135,127,193,0.4)" />上期支出</span>
           <span class="chart-legend-item"><i class="dot" style="background: var(--zj-expense)" />支出</span>
           <span class="chart-legend-item"><i class="dot" style="background: var(--zj-income)" />收入</span>
         </span>
