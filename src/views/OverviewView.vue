@@ -16,7 +16,7 @@ import PageSub from '../components/PageSub.vue';
 const router = useRouter();
 const summary = ref<SummaryStats | null>(null);
 
-// 概览图表：近 12 个月收支柱状（月份显示）
+// 概览图表：近 12 个月收支柱状（月份显示，图四 Time-series with Columns 范式）
 const ovTrend = ref<ChartPoint[]>([]);
 async function loadOvTrend() {
   const now = new Date();
@@ -28,6 +28,18 @@ async function loadOvTrend() {
     ovTrend.value = [];
   }
 }
+
+const ovChartOption = computed<echarts.EChartsOption>(() => ({
+  ...chartBase(),
+  grid: { left: 4, right: 12, top: 16, bottom: 0, containLabel: true },
+  tooltip: { ...chartBase().tooltip, trigger: 'axis', valueFormatter: (v) => `¥ ${fmtAmount(Number(v))}` },
+  xAxis: { ...chartBase().xAxis, type: 'category', data: ovTrend.value.map((d: ChartPoint) => d.label) },
+  yAxis: { ...chartBase().yAxis, type: 'value', axisLabel: { color: chartToken('--zj-text-sub', '#7d8296'), fontSize: 11 } },
+  series: [
+    { name: '支出', type: 'bar', stack: 'total', barWidth: '62%', barMaxWidth: 26, itemStyle: { color: chartToken('--zj-expense', '#d4849b') }, data: ovTrend.value.map((d: ChartPoint) => Math.round(d.expense * 100) / 100) },
+    { name: '收入', type: 'bar', stack: 'total', barWidth: '62%', barMaxWidth: 26, itemStyle: { color: chartToken('--zj-income', '#6fae9c'), borderRadius: [5, 5, 0, 0] }, data: ovTrend.value.map((d: ChartPoint) => Math.round(d.income * 100) / 100) },
+  ],
+} as echarts.EChartsOption));
 const recent = ref<Tx[]>([]);
 const balances = ref<AccountBalance[]>([]);
 const accountOrder = ref<string[]>([]);
@@ -87,19 +99,6 @@ const card2Value = () =>
   ovRange.value === 'day' ? summary.value?.today_income ?? 0
     : ovRange.value === 'month' ? summary.value?.month_income ?? 0
     : summary.value?.year_income ?? 0;
-
-// 概览图表：近 12 个月收支柱状（图四 Time-series with Columns 范式）
-const ovChartOption = computed<echarts.EChartsOption>(() => ({
-  ...chartBase(),
-  grid: { left: 4, right: 12, top: 16, bottom: 0, containLabel: true },
-  tooltip: { ...chartBase().tooltip, trigger: 'axis', valueFormatter: (v) => `¥ ${fmtAmount(Number(v))}` },
-  xAxis: { ...chartBase().xAxis, type: 'category', data: ovTrend.value.map((d: ChartPoint) => d.label) },
-  yAxis: { ...chartBase().yAxis, type: 'value', axisLabel: { color: chartToken('--zj-text-sub', '#7d8296'), fontSize: 11 } },
-  series: [
-    { name: '支出', type: 'bar', barWidth: '62%', barMaxWidth: 26, itemStyle: { color: chartToken('--zj-expense', '#d4849b'), borderRadius: [5, 5, 0, 0] }, data: ovTrend.value.map((d: ChartPoint) => Math.round(d.expense * 100) / 100) },
-    { name: '收入', type: 'bar', barWidth: '62%', barMaxWidth: 26, itemStyle: { color: chartToken('--zj-income', '#6fae9c'), borderRadius: [5, 5, 0, 0] }, data: ovTrend.value.map((d: ChartPoint) => Math.round(d.income * 100) / 100) },
-  ],
-} as echarts.EChartsOption));
 
 // 概览卡趋势箭头（POS 范式）：日 vs 昨日、月 vs 上月；年无上期不显示
 function prevLabel(): string {
@@ -280,19 +279,15 @@ function signOf(tx: Tx): string {
 
 <template>
   <div>
-    <h1 class="zj-page-title">概览</h1>
+<h1 class="zj-page-title">概览</h1>
     <PageSub page="overview" fallback="今天的你花了多少钱？" />
 
-<div class="ov-grid">
-      <div class="ov-col-main" style="display: flex; flex-direction: column; gap: 14px; min-width: 0">
+    <div class="ov-grid" style="align-items: start">
+      <div class="ov-col" style="display: flex; flex-direction: column; gap: 14px; min-width: 0">
       <div class="zj-card">
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px">
-          <span class="stat-title">收支概览 · 近 12 个月</span>
+          <span class="stat-title">收支概览 - 近 12 个月</span>
           <div style="flex: 1" />
-          <span style="display: inline-flex; align-items: center; gap: 12px; font-size: 12px; color: var(--zj-text-sub)">
-            <span style="display: inline-flex; align-items: center; gap: 5px"><i class="ov-dot" style="background: var(--zj-expense)" />支出</span>
-            <span style="display: inline-flex; align-items: center; gap: 5px"><i class="ov-dot" style="background: var(--zj-income)" />收入</span>
-          </span>
         </div>
         <template v-if="ovTrend.length > 0">
           <ChartCard name="收支概览" :option="ovChartOption" height="280px" />
@@ -300,9 +295,8 @@ function signOf(tx: Tx): string {
         <div v-else style="height: 200px; display: grid; place-items: center; color: var(--zj-text-sub); font-size: 13px; border: 1px dashed var(--zj-border); border-radius: 12px">暂无数据</div>
       </div>
 
-    </div>
-
-    <!-- 账户余额框架：拖拽排序 / 增删 / 双击设基数 -->
+      </div>
+          <!-- 账户余额框架：拖拽排序 / 增删 / 双击设基数 -->
     <div class="zj-card" style="margin-bottom: 14px">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
         <span style="font-weight: 700; font-size: 15px">账户余额</span>
@@ -384,8 +378,10 @@ function signOf(tx: Tx): string {
       </div>
     </div>
 
-      </div>
-      <div class="ov-col-side" style="display: flex; flex-direction: column; gap: 14px; min-width: 0">
+    <ImportBillDialog v-model:visible="importVisible" @imported="load" />
+    <TxEditDialog v-model:visible="editVisible" :tx="editing" @saved="load" />
+    <AccountBaseDialog v-model:visible="baseVisible" :account="baseAccount" @saved="load" />
+<div class="ov-col" style="display: flex; flex-direction: column; gap: 14px; min-width: 0">
       <div class="zj-card">
         <div class="stat-title" style="margin-bottom: 10px">时间范围</div>
         <el-segmented
@@ -396,7 +392,7 @@ function signOf(tx: Tx): string {
           @change="(v: any) => setOvRange(v)"
         />
       </div>
-      <div class="zj-card ov-card stat-card stat-expense" style="flex: 1">
+      <div class="zj-card ov-card" style="min-width: 0">
         <div class="ov-card-head" style="align-items: center">
           <span class="stat-chip"><el-icon><Coin /></el-icon></span>
           <span class="stat-title">支出</span>
@@ -411,7 +407,7 @@ function signOf(tx: Tx): string {
           >{{ trendPct('expense')! > 0 ? '↑' : '↓' }} {{ Math.abs(trendPct('expense')!) }}%</span>
         </div>
       </div>
-      <div class="zj-card ov-card stat-card stat-income" style="flex: 1">
+      <div class="zj-card ov-card" style="min-width: 0">
         <div class="ov-card-head" style="align-items: center">
           <span class="stat-chip"><el-icon><Money /></el-icon></span>
           <span class="stat-title">收入</span>
@@ -426,7 +422,7 @@ function signOf(tx: Tx): string {
           >{{ trendPct('income')! >= 0 ? '↑' : '↓' }} {{ Math.abs(trendPct('income')!) }}%</span>
         </div>
       </div>
-      <div class="zj-card ov-card" style="flex: 1">
+      <div class="zj-card ov-card" style="min-width: 0">
         <div class="ov-card-head" style="align-items: center">
           <span class="stat-chip"><el-icon><Wallet /></el-icon></span>
           <span class="stat-title">账户总额</span>
@@ -445,14 +441,16 @@ function signOf(tx: Tx): string {
           />
         </div>
       </div>
-<div class="zj-card ov-actions" style="flex: 1">
+      <div class="zj-card ov-actions" style="min-width: 0">
         <el-button type="primary" @click="importVisible = true">
           <el-icon style="margin-right: 6px"><UploadFilled /></el-icon> 导入账单
         </el-button>
         <el-button @click="openEdit(null)">
           <el-icon style="margin-right: 6px"><EditPen /></el-icon> 手动记账
         </el-button>
-        <el-button text type="primary" @click="router.push('/stats')">查看统计 →</el-button>      </div>
+        <el-button text type="primary" @click="router.push('/stats')">查看统计 →</el-button>
+      </div>
+      </div>
     </div>
 
     <ImportBillDialog v-model:visible="importVisible" @imported="load" />
@@ -584,15 +582,6 @@ function signOf(tx: Tx): string {
   margin-left: 5px;
   font-size: 11px;
   color: var(--zj-text-sub);
-}
-
-/* 概览图例色点 */
-.ov-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: none;
-  display: inline-block;
 }
 
 /* 最近记录的分类稳定色点 */
