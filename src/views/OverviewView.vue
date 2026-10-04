@@ -574,4 +574,12 @@ function signOf(tx: Tx): string {
   font-size: 11px;
   color: var(--zj-text-sub);
 }
+
+/* 最近记录的分类稳定色点 */
+.row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
 </style>
