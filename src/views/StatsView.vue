@@ -14,7 +14,6 @@ type Dim = 'year' | 'month' | 'day';
 const dimension = ref<Dim>('month'); // 年 / 月 / 日：决定时间轴粒度，并联动默认时间区间
 const pieType = ref<'支出' | '收入'>('支出');
 const groupBy = ref('l1');
-const chartKind = ref<'pie' | 'bar'>('pie');
 
 const GROUP_OPTIONS = [
   { value: 'l1', label: '一级分类' },
@@ -42,11 +41,6 @@ const structRef = ref<InstanceType<typeof ChartCard>>();
 function p(n: number) { return String(n).padStart(2, '0'); }
 function fdate(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
-// 环形图同色系：最大块炭黑 #222026，其余淡紫阶梯（Zona Pro 家族色）
-function donutColor(i: number): string {
-  return i === 0 ? '#222026' : accentLadder(i - 1);
 }
 
 function setDefaultRange() {
@@ -223,63 +217,12 @@ const legendItems = computed(() =>
   pieData.value.slice(0, 12).map((d, i) => ({
     name: d.name,
     value: d.value,
-    color: chartKind.value === 'pie' ? donutColor(i) : accentLadder(i),
+    color: accentLadder(i),
   }))
 );
 
 const structOption = computed<echarts.EChartsOption>(() => {
   const data = pieData.value.map((d) => ({ name: d.name, value: Math.round(d.value * 100) / 100 }));
-  if (chartKind.value === 'pie') {
-    // 环形图（POS 范式）：同色系家族（最大块炭黑 + 淡紫阶梯）、中心合计、白色胶囊 % 徽章。
-    // 注意：不铺 chartBase 的坐标轴组件——饼图不需要，否则会隐式画出轴线（左侧竖线 bug）。
-    const total = data.reduce((sum, d) => sum + d.value, 0);
-    return {
-      backgroundColor: 'transparent',
-      animation: false,
-      color: data.map((_, i) => donutColor(i)),
-      tooltip: {
-        ...chartBase().tooltip,
-        trigger: 'item',
-        formatter: '{b}<br/>¥{c}（{d}%）',
-      },
-      title: {
-        text: `¥ ${fmtAmount(total)}`,
-        subtext: '合计',
-        left: 'center',
-        top: '41%',
-        textStyle: { fontSize: 22, fontWeight: 700, color: chartToken('--zj-text', '#3c4150') },
-        subtextStyle: { fontSize: 12, color: chartToken('--zj-text-sub', '#7d8296') },
-      },
-      series: [
-        {
-          name: pieType.value,
-          type: 'pie',
-          radius: ['50%', '76%'],
-          center: ['50%', '50%'],
-          itemStyle: {
-            borderRadius: 8,
-            borderColor: chartToken('--zj-card-solid', '#ffffff'),
-            borderWidth: 2,
-          },
-          label: {
-            show: true,
-            position: 'inside',
-            formatter: '{d}%',
-            color: '#222026',
-            backgroundColor: '#ffffff',
-            borderColor: 'rgba(34,37,46,0.08)',
-            borderWidth: 1,
-            borderRadius: 999,
-            padding: [3, 7],
-            fontSize: 10.5,
-            fontWeight: 600,
-          },
-          labelLayout: { hideOverlap: true },
-          data,
-        },
-      ],
-    } as echarts.EChartsOption;
-  }
   const top = data.slice(0, 12).reverse();
   const rank = (name: string) => pieData.value.findIndex((d) => d.name === name);
   return {
@@ -290,7 +233,7 @@ const structOption = computed<echarts.EChartsOption>(() => {
       ...chartBase().xAxis,
       type: 'value',
       axisLabel: {
-        color: chartToken('--zj-text-sub', '#575d6c'),
+        color: chartToken('--zj-text-sub', '#71768a'),
         fontSize: 11,
         formatter: (v: number) => (Math.abs(v) >= 10000 ? `${(v / 10000).toFixed(1)}万` : String(v)),
       },
@@ -299,7 +242,7 @@ const structOption = computed<echarts.EChartsOption>(() => {
     yAxis: {
       type: 'category',
       data: top.map((d) => d.name),
-      axisLabel: { color: chartToken('--zj-text', '#21242d'), fontSize: 12, width: 108, overflow: 'truncate' },
+      axisLabel: { color: chartToken('--zj-text', '#3c4150'), fontSize: 12, width: 108, overflow: 'truncate' },
     },
     series: [
       {
@@ -323,41 +266,6 @@ async function exportBoth() {
   <div>
     <h1 class="zj-page-title">统计</h1>
     <PageSub page="stats" fallback="时间趋势看节奏，结构图按分类 / 商家 / 账户等维度自由切分" />
-
-    <!-- 第 1 层：筛选 -->
-    <div class="zj-card" style="margin-bottom: 14px">
-      <div class="zj-toolbar" style="row-gap: 12px">
-        <el-radio-group v-model="dimension" @change="onDimensionChange">
-          <el-radio-button value="year">年</el-radio-button>
-          <el-radio-button value="month">月</el-radio-button>
-          <el-radio-button value="day">日</el-radio-button>
-        </el-radio-group>
-
-        <el-date-picker v-model="dateFrom" type="date" value-format="YYYY-MM-DD" placeholder="开始" style="width: 140px" :clearable="false" />
-        <span style="color: var(--zj-text-sub)">至</span>
-        <el-date-picker v-model="dateTo" type="date" value-format="YYYY-MM-DD" placeholder="结束" style="width: 140px" :clearable="false" />
-
-        <el-divider direction="vertical" />
-
-        <el-radio-group v-model="pieType">
-          <el-radio-button value="支出">支出</el-radio-button>
-          <el-radio-button value="收入">收入</el-radio-button>
-        </el-radio-group>
-
-        <span style="color: var(--zj-text-sub); font-size: 13px">按</span>
-        <el-select v-model="groupBy" style="width: 120px">
-          <el-option v-for="o in GROUP_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
-        </el-select>
-
-        <el-radio-group v-model="chartKind">
-          <el-radio-button value="pie">饼图</el-radio-button>
-          <el-radio-button value="bar">条形</el-radio-button>
-        </el-radio-group>
-
-        <div style="flex: 1" />
-        <el-button text type="primary" @click="exportBoth">导出图表 PNG</el-button>
-      </div>
-    </div>
 
     <!-- 第 2 层：收支趋势（柱状图） -->
     <div class="zj-card" style="margin-bottom: 14px">
@@ -388,10 +296,40 @@ async function exportBoth() {
       </div>
     </div>
 
+    <!-- 第 1 层：筛选 -->
+    <div class="zj-card" style="margin-bottom: 14px">
+      <div class="zj-toolbar" style="row-gap: 12px">
+        <el-radio-group v-model="dimension" @change="onDimensionChange">
+          <el-radio-button value="year">年</el-radio-button>
+          <el-radio-button value="month">月</el-radio-button>
+          <el-radio-button value="day">日</el-radio-button>
+        </el-radio-group>
+
+        <el-date-picker v-model="dateFrom" type="date" value-format="YYYY-MM-DD" placeholder="开始" style="width: 140px" :clearable="false" />
+        <span style="color: var(--zj-text-sub)">至</span>
+        <el-date-picker v-model="dateTo" type="date" value-format="YYYY-MM-DD" placeholder="结束" style="width: 140px" :clearable="false" />
+
+        <el-divider direction="vertical" />
+
+        <el-radio-group v-model="pieType">
+          <el-radio-button value="支出">支出</el-radio-button>
+          <el-radio-button value="收入">收入</el-radio-button>
+        </el-radio-group>
+
+        <span style="color: var(--zj-text-sub); font-size: 13px">按</span>
+        <el-select v-model="groupBy" style="width: 120px">
+          <el-option v-for="o in GROUP_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
+        </el-select>
+
+        <div style="flex: 1" />
+        <el-button text type="primary" @click="exportBoth">导出图表 PNG</el-button>
+      </div>
+    </div>
+
     <!-- 第 3 层：结构（饼图 / 条形） -->
     <div class="zj-card">
       <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px">
-        <span style="font-weight: 600">{{ pieType }} · 按{{ groupLabel }}{{ chartKind === 'pie' ? '占比' : '排行' }}</span>
+        <span style="font-weight: 600">{{ pieType }} · 按{{ groupLabel }}排行</span>
         <span style="color: var(--zj-text-sub); font-size: 12px" class="zj-num">
           合计
           <span :class="pieType === '支出' ? 'zj-amount-expense' : 'zj-amount-income'">¥ {{ fmtAmount(pieData.reduce((s, d) => s + d.value, 0)) }}</span>
