@@ -9,12 +9,11 @@ import * as echarts from 'echarts';
 export function chartToken(name: string, fallback: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 }
-
 /** Top-N 系列强调色阶梯：同一强调色按透明度分阶，视觉上"同一个家族"（SPEC §9.2） */
 const LADDER = [1, 0.72, 0.54, 0.4, 0.3, 0.22, 0.16, 0.12];
 
 export function accentLadder(rank: number): string {
-  const accent = chartToken('--zj-primary', '#5570d6');
+  const accent = chartToken('--zj-primary', '#877FC1');
   const a = LADDER[Math.min(Math.max(rank, 0), LADDER.length - 1)];
   return withAlpha(accent, a);
 }
@@ -37,8 +36,8 @@ export function verticalFade(color: string, topAlpha = 0.45): echarts.graphic.Li
   ]);
 }
 
-/** 饼图等需要强区分场景的 10 色柔和去饱和色板（全应用唯一一处系列色定义） */
-export const SOFT_PALETTE = ['#7b84ec', '#6fb59a', '#c9a06a', '#c98ba0', '#6ba3c9', '#9d8fc9', '#c98a8a', '#8fb37e', '#c9b06a', '#7aa3b5'];
+/** 饼图等需要强区分场景的 10 色柔和去饱和色板（全应用唯一一处系列色定义），首色 = 强调紫 */
+export const SOFT_PALETTE = ['#877FC1', '#6fb59a', '#c9a06a', '#d3859b', '#6ba3c9', '#a48ad4', '#c98a8a', '#8fb37e', '#c9b06a', '#7aa3b5'];
 
 /** 公共底座：所有 ECharts option 先展开它，再覆盖各自的 series/xAxis 等 */
 export function chartBase(): echarts.EChartsOption {

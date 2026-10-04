@@ -5,25 +5,25 @@
 :root {
   /* 主色可被个性化覆盖（theme.ts 写入 --zj-primary / --zj-logo-from / --zj-logo-to）
      色彩原则（用户验收反馈）：全部中等偏低饱和、柔和去刺激（DESIGN-SPEC §3.4） */
-  --zj-primary: #5570d6;
+  --zj-primary: #877FC1;
   --zj-expense: #d4849b;
   --zj-income: #6fae9c;
   --zj-transfer: #9d8fd6;
-  --zj-logo-from: #5570d6;
-  --zj-logo-to: #9d8fd6;
+  --zj-logo-from: #877FC1;
+  --zj-logo-to: #b3a7e6;
 
-  --zj-bg: #f3eef1;
+  --zj-bg: #F5F6FA;
   --zj-card: rgba(255, 255, 255, 0.72);
   --zj-card-solid: #ffffff;
-  --zj-card-hover: rgba(250, 246, 248, 0.9);
+  --zj-card-hover: rgba(248, 247, 252, 0.9);
   --zj-titlebar: rgba(255, 255, 255, 0.4);
 
   --zj-sidebar: rgba(255, 255, 255, 0.55);
   --zj-sidebar-text: #4d5264;
   --zj-sidebar-sub: #767b8e;
   --zj-sidebar-hover: rgba(46, 52, 72, 0.06);
-  --zj-sidebar-active: rgba(85, 112, 214, 0.11);
-  --zj-sidebar-active-text: #4a63c0;
+  --zj-sidebar-active: rgba(135, 127, 193, 0.14);
+  --zj-sidebar-active-text: #6f68b5;
   --zj-sidebar-border: rgba(46, 52, 72, 0.08);
 
   --zj-text: #3c4150;
@@ -95,8 +95,8 @@ html.dark {
   --zj-sidebar-text: #a8afc2;
   --zj-sidebar-sub: #868da1;
   --zj-sidebar-hover: rgba(255, 255, 255, 0.07);
-  --zj-sidebar-active: rgba(123, 154, 255, 0.16);
-  --zj-sidebar-active-text: #c9d5ff;
+  --zj-sidebar-active: rgba(163, 160, 232, 0.16);
+  --zj-sidebar-active-text: #c9c6f2;
   --zj-sidebar-border: rgba(255, 255, 255, 0.07);
 
   --zj-text: #edf0f7;
@@ -142,8 +142,8 @@ html.resizing {
 body {
   font-family: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', system-ui, sans-serif;
   background:
-    radial-gradient(1100px 700px at 12% -8%, rgba(211, 133, 155, 0.16) 0%, transparent 55%),
-    radial-gradient(900px 620px at 108% 108%, rgba(157, 143, 214, 0.12) 0%, transparent 55%),
+    radial-gradient(1100px 700px at 12% -8%, rgba(135, 127, 193, 0.16) 0%, transparent 55%),
+    radial-gradient(900px 620px at 108% 108%, rgba(179, 167, 230, 0.14) 0%, transparent 55%),
     var(--zj-bg);
   color: var(--zj-text);
   transition: background 0.35s var(--zj-ease), color 0.35s var(--zj-ease);

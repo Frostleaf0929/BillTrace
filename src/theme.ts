@@ -17,6 +17,7 @@ function applyTheme() {
 // ---------- 个性化外观 ----------
 export interface AccentOption { id: string; name: string; light: string; dark: string }
 export const ACCENTS: AccentOption[] = [
+  { id: 'iris', name: '鸢尾紫', light: '#877FC1', dark: '#a3a0e8' },
   { id: 'aurora', name: '极光蓝', light: '#6c85d8', dark: '#96aaff' },
   { id: 'mint', name: '薄荷绿', light: '#63b394', dark: '#7ccbaa' },
   { id: 'sunset', name: '落日橙', light: '#dd9a63', dark: '#ffb584' },
@@ -24,7 +25,7 @@ export const ACCENTS: AccentOption[] = [
   { id: 'violet', name: '雾紫', light: '#a48ad4', dark: '#c7b3ef' },
   { id: 'slate', name: '石青灰', light: '#7a8ba0', dark: '#93a6bf' },
 ];
-export const accentId = ref('aurora');
+export const accentId = ref('iris');
 export const customAccent = ref(''); // 用户自定义色（#rrggbb），设置后优先于预设
 export const glassOn = ref(true);
 export const blurPx = ref(24);
@@ -79,10 +80,20 @@ async function loadAll() {
   try {
     const t = await api.getSetting('theme');
     if (t === 'light' || t === 'dark' || t === 'system') themeMode.value = t;
-    const a = await api.getSetting('accent');
-    if (a && ACCENTS.some((x) => x.id === a)) accentId.value = a;
-    const ca = await api.getSetting('accentCustom');
-    if (ca) customAccent.value = ca;
+    // v0.3.0 设计换血：一次性迁移到默认的鸢尾紫（此前存过旧强调色也会被重置一次）
+    const accentMigrated = await api.getSetting('accentV2');
+    if (!accentMigrated) {
+      accentId.value = 'iris';
+      try {
+        await api.setSetting('accent', 'iris');
+        await api.setSetting('accentV2', '1');
+      } catch { /* 忽略 */ }
+    } else {
+      const a = await api.getSetting('accent');
+      if (a && ACCENTS.some((x) => x.id === a)) accentId.value = a;
+      const ca = await api.getSetting('accentCustom');
+      if (ca) customAccent.value = ca;
+    }
     glassOn.value = (await api.getSetting('glassOn')) !== 'false';
     const b = Number(await api.getSetting('blurPx'));
     if (b >= 4 && b <= 40) blurPx.value = b;
@@ -187,8 +198,8 @@ export function animateThemeChange(apply: () => void, origin?: { x: number; y: n
   overlay.style.cssText = [
     'position:fixed', 'inset:0', 'z-index:9999', 'pointer-events:none',
     'background:', darkNext
-      ? 'radial-gradient(1200px 750px at 10% -12%, rgba(64,96,210,0.20) 0%, transparent 55%), #0c0f16'
-      : 'radial-gradient(1100px 700px at 12% -8%, rgba(62,99,221,0.10) 0%, transparent 55%), #eef0f7',
+      ? 'radial-gradient(1200px 750px at 10% -12%, rgba(135,127,193,0.18) 0%, transparent 55%), #0c0f16'
+      : 'radial-gradient(1100px 700px at 12% -8%, rgba(135,127,193,0.16) 0%, transparent 55%), #F5F6FA',
     `clip-path: circle(0px at ${x}px ${y}px)`,
   ].join(';');
   document.body.appendChild(overlay);
