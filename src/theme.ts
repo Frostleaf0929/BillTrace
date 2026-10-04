@@ -198,7 +198,7 @@ export function animateThemeChange(apply: () => void, origin?: { x: number; y: n
   overlay.style.cssText = [
     'position:fixed', 'inset:0', 'z-index:9999', 'pointer-events:none',
     'background:', darkNext
-      ? 'radial-gradient(1200px 750px at 10% -12%, rgba(135,127,193,0.18) 0%, transparent 55%), #0c0f16'
+      ? 'radial-gradient(1200px 750px at 10% -12%, rgba(135,127,193,0.18) 0%, transparent 55%), #0d0d0d'
       : 'radial-gradient(1100px 700px at 12% -8%, rgba(135,127,193,0.16) 0%, transparent 55%), #F5F6FA',
     `clip-path: circle(0px at ${x}px ${y}px)`,
   ].join(';');

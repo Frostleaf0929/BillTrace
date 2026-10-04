@@ -85,13 +85,14 @@ html.dark {
   --zj-income: #66c39e;
   --zj-transfer: #b7a3ea;
 
-  --zj-bg: #0c0f16;
-  --zj-card: rgba(24, 29, 41, 0.66);
-  --zj-card-solid: #171c28;
-  --zj-card-hover: rgba(33, 39, 54, 0.85);
-  --zj-titlebar: rgba(13, 16, 24, 0.5);
+  /* 深色模式：Folia 式中性纯黑（无渐变染色，参考图六） */
+  --zj-bg: #0d0d0d;
+  --zj-card: rgba(23, 23, 24, 0.75);
+  --zj-card-solid: #171718;
+  --zj-card-hover: rgba(30, 30, 32, 0.85);
+  --zj-titlebar: rgba(16, 16, 17, 0.5);
 
-  --zj-sidebar: rgba(15, 19, 28, 0.55);
+  --zj-sidebar: rgba(18, 18, 19, 0.6);
   --zj-sidebar-text: #a8afc2;
   --zj-sidebar-sub: #868da1;
   --zj-sidebar-hover: rgba(255, 255, 255, 0.07);
@@ -697,15 +698,6 @@ html.dark .zj-logo .logo-dot {
   }
 }
 
-/* 深色模式：收支卡语义色整卡染色（Folia 范式） */
-html.dark .stat-card.stat-expense {
-  background: linear-gradient(160deg, rgba(240, 146, 157, 0.16), rgba(24, 29, 41, 0.92) 68%);
-  border-color: rgba(240, 146, 157, 0.25);
-}
-html.dark .stat-card.stat-income {
-  background: linear-gradient(160deg, rgba(102, 195, 158, 0.16), rgba(24, 29, 41, 0.92) 68%);
-  border-color: rgba(102, 195, 158, 0.25);
-}
 .el-alert {
   border-radius: 12px;
 }
