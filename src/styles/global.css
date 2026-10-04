@@ -142,10 +142,7 @@ html.resizing {
 
 body {
   font-family: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', system-ui, sans-serif;
-  background:
-    radial-gradient(1100px 700px at 12% -8%, rgba(135, 127, 193, 0.16) 0%, transparent 55%),
-    radial-gradient(900px 620px at 108% 108%, rgba(179, 167, 230, 0.14) 0%, transparent 55%),
-    var(--zj-bg);
+  background: var(--zj-bg);
   color: var(--zj-text);
   transition: background 0.35s var(--zj-ease), color 0.35s var(--zj-ease);
   -webkit-font-smoothing: antialiased;

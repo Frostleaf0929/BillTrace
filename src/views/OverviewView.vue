@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { UploadFilled, EditPen, Coin, Money, Wallet, Plus, Delete, CollectionTag } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { api, fmtAmount } from '../api';
-import { SOFT_PALETTE } from '../lib/chartTheme';
-import type { AccountBalance, SummaryStats, Tx, BudgetStatus } from '../types';
+import { SOFT_PALETTE, chartBase, chartToken } from '../lib/chartTheme';
+import * as echarts from 'echarts';
+import ChartCard from '../components/ChartCard.vue';
+import type { AccountBalance, SummaryStats, Tx, ChartPoint } from '../types';
 import ImportBillDialog from '../components/ImportBillDialog.vue';
 import TxEditDialog from '../components/TxEditDialog.vue';
 import AccountBaseDialog from '../components/AccountBaseDialog.vue';
@@ -14,16 +16,16 @@ import PageSub from '../components/PageSub.vue';
 const router = useRouter();
 const summary = ref<SummaryStats | null>(null);
 
-// 本月总预算执行（未设预算时显示引导；"剩余/日均"细账在预算页看）
-const monthBudget = ref<BudgetStatus | null>(null);
-const monthKeyNow = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-
-async function loadBudget() {
+// 概览图表：近 12 个月收支柱状（月份显示）
+const ovTrend = ref<ChartPoint[]>([]);
+async function loadOvTrend() {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const f = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
   try {
-    const list = await api.budgetList('month', monthKeyNow);
-    monthBudget.value = list.find((i) => i.category === '') ?? null;
+    ovTrend.value = await api.statsChart('month', f(from), f(now));
   } catch {
-    monthBudget.value = null;
+    ovTrend.value = [];
   }
 }
 const recent = ref<Tx[]>([]);
@@ -85,6 +87,19 @@ const card2Value = () =>
   ovRange.value === 'day' ? summary.value?.today_income ?? 0
     : ovRange.value === 'month' ? summary.value?.month_income ?? 0
     : summary.value?.year_income ?? 0;
+
+// 概览图表：近 12 个月收支柱状（图四 Time-series with Columns 范式）
+const ovChartOption = computed<echarts.EChartsOption>(() => ({
+  ...chartBase(),
+  grid: { left: 4, right: 12, top: 16, bottom: 0, containLabel: true },
+  tooltip: { ...chartBase().tooltip, trigger: 'axis', valueFormatter: (v) => `¥ ${fmtAmount(Number(v))}` },
+  xAxis: { ...chartBase().xAxis, type: 'category', data: ovTrend.value.map((d: ChartPoint) => d.label) },
+  yAxis: { ...chartBase().yAxis, type: 'value', axisLabel: { color: chartToken('--zj-text-sub', '#7d8296'), fontSize: 11 } },
+  series: [
+    { name: '支出', type: 'bar', barWidth: '62%', barMaxWidth: 26, itemStyle: { color: chartToken('--zj-expense', '#d4849b'), borderRadius: [5, 5, 0, 0] }, data: ovTrend.value.map((d: ChartPoint) => Math.round(d.expense * 100) / 100) },
+    { name: '收入', type: 'bar', barWidth: '62%', barMaxWidth: 26, itemStyle: { color: chartToken('--zj-income', '#6fae9c'), borderRadius: [5, 5, 0, 0] }, data: ovTrend.value.map((d: ChartPoint) => Math.round(d.income * 100) / 100) },
+  ],
+} as echarts.EChartsOption));
 
 // 概览卡趋势箭头（POS 范式）：日 vs 昨日、月 vs 上月；年无上期不显示
 function prevLabel(): string {
@@ -223,7 +238,6 @@ async function load() {
   } catch (e) {
     ElMessage.error(String(e));
   }
-  loadBudget();
   if (accountOrder.value.length === 0) {
     try {
       const raw = await api.getSetting('accountOrder');
@@ -235,6 +249,7 @@ async function load() {
 onMounted(async () => {
   await loadRangeSetting();
   load();
+  loadOvTrend();
 });
 
 function setBase(acc: AccountBalance) {
@@ -268,98 +283,23 @@ function signOf(tx: Tx): string {
     <h1 class="zj-page-title">概览</h1>
     <PageSub page="overview" fallback="今天的你花了多少钱？" />
 
-    <div class="zj-row" style="margin-bottom: 14px">
-      <div class="zj-card ov-card stat-card stat-expense" style="flex: 1">
-        <div class="ov-card-head" style="align-items: center">
-          <span class="stat-chip"><el-icon><Coin /></el-icon></span>
-          <span class="stat-title">支出</span>
-        </div>
-        <div class="stat-num zj-num" style="color: var(--zj-expense)">¥ {{ fmtAmount(card1Value()) }}</div>
-        <div class="stat-foot">
-          <span class="stat-vs">{{ RANGE_LABEL[ovRange] }}支出<template v-if="trendPct('expense') !== null"> · 较{{ prevLabel() }}</template></span>
-          <span
-            v-if="trendPct('expense') !== null"
-            class="stat-trend"
-            :class="trendPct('expense')! > 0 ? 'bad' : 'good'"
-          >{{ trendPct('expense')! > 0 ? '↑' : '↓' }} {{ Math.abs(trendPct('expense')!) }}%</span>
-        </div>
-      </div>
-      <div class="zj-card ov-card stat-card stat-income" style="flex: 1">
-        <div class="ov-card-head" style="align-items: center">
-          <span class="stat-chip"><el-icon><Money /></el-icon></span>
-          <span class="stat-title">收入</span>
-        </div>
-        <div class="stat-num zj-num" style="color: var(--zj-income)">¥ {{ fmtAmount(card2Value()) }}</div>
-        <div class="stat-foot">
-          <span class="stat-vs">{{ RANGE_LABEL[ovRange] }}收入<template v-if="trendPct('income') !== null"> · 较{{ prevLabel() }}</template></span>
-          <span
-            v-if="trendPct('income') !== null"
-            class="stat-trend"
-            :class="trendPct('income')! >= 0 ? 'good' : 'bad'"
-          >{{ trendPct('income')! >= 0 ? '↑' : '↓' }} {{ Math.abs(trendPct('income')!) }}%</span>
-        </div>
-      </div>
-      <div class="zj-card ov-card" style="flex: 1">
-        <div class="ov-card-head" style="align-items: center">
-          <span class="stat-chip"><el-icon><Wallet /></el-icon></span>
-          <span class="stat-title">账户总额</span>
-        </div>
-        <div class="stat-num zj-num" :style="{ color: card3Value() < 0 ? 'var(--zj-expense)' : 'var(--zj-text)' }">
-          ¥ {{ fmtAmount(card3Value()) }}
-        </div>
-        <div class="stat-foot">
-          <span class="stat-vs">{{ balances.length }} 个账户</span>
+<div class="ov-grid">
+      <div class="ov-col-main" style="display: flex; flex-direction: column; gap: 14px; min-width: 0">
+      <div class="zj-card">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px">
+          <span class="stat-title">收支概览 · 近 12 个月</span>
           <div style="flex: 1" />
-          <el-segmented
-            :model-value="ovRange"
-            :options="[{ label: '日', value: 'day' }, { label: '月', value: 'month' }, { label: '年', value: 'year' }]"
-            size="small"
-            @change="(v: any) => setOvRange(v)"
-          />
+          <span style="display: inline-flex; align-items: center; gap: 12px; font-size: 12px; color: var(--zj-text-sub)">
+            <span style="display: inline-flex; align-items: center; gap: 5px"><i class="ov-dot" style="background: var(--zj-expense)" />支出</span>
+            <span style="display: inline-flex; align-items: center; gap: 5px"><i class="ov-dot" style="background: var(--zj-income)" />收入</span>
+          </span>
         </div>
+        <template v-if="ovTrend.length > 0">
+          <ChartCard name="收支概览" :option="ovChartOption" height="280px" />
+        </template>
+        <div v-else style="height: 200px; display: grid; place-items: center; color: var(--zj-text-sub); font-size: 13px; border: 1px dashed var(--zj-border); border-radius: 12px">暂无数据</div>
       </div>
-<div class="zj-card ov-actions" style="flex: 1">
-        <el-button type="primary" @click="importVisible = true">
-          <el-icon style="margin-right: 6px"><UploadFilled /></el-icon> 导入账单
-        </el-button>
-        <el-button @click="openEdit(null)">
-          <el-icon style="margin-right: 6px"><EditPen /></el-icon> 手动记账
-        </el-button>
-        <el-button text type="primary" @click="router.push('/stats')">查看统计 →</el-button>
-    </div>
-    </div>
 
-    <!-- 本月总预算执行卡（深色锚点卡，Zona Pro #222026；未设预算时显示引导） -->
-    <div v-if="monthBudget" class="zj-card zj-anchor" style="margin-bottom: 14px">
-      <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap">
-        <span class="stat-title">本月预算</span>
-        <span
-          class="zj-num"
-          :style="{ color: monthBudget.spent > monthBudget.amount ? '#f0929d' : '#f5f6fa' }"
-          style="font-size: 20px; font-weight: 700"
-        >¥ {{ fmtAmount(monthBudget.spent) }}</span>
-        <span class="zj-num" style="color: var(--zj-text-sub); font-size: 12.5px">
-          / ¥ {{ fmtAmount(monthBudget.amount) }} · 已用 {{ ((monthBudget.spent / monthBudget.amount) * 100).toFixed(0) }}%
-        </span>
-        <div style="flex: 1" />
-        <router-link to="/budget" style="font-size: 12.5px">去预算页 ›</router-link>
-      </div>
-      <div style="height: 8px; border-radius: 999px; background: var(--zj-sidebar-hover); overflow: hidden; margin-top: 8px">
-        <i
-          :style="{
-            display: 'block',
-            height: '100%',
-            borderRadius: '999px',
-            width: Math.min(monthBudget.spent / monthBudget.amount, 1) * 100 + '%',
-            background: monthBudget.spent > monthBudget.amount ? 'var(--zj-expense)' : monthBudget.spent / monthBudget.amount > 0.8 ? 'var(--zj-transfer)' : 'var(--zj-primary)',
-          }"
-        />
-      </div>
-    </div>
-    <div v-else class="zj-card" style="margin-bottom: 14px; display: flex; align-items: center; gap: 10px">
-      <span style="color: var(--zj-text-sub); font-size: 13px">本月还没设总预算——设一个，超支前心里有数。</span>
-      <div style="flex: 1" />
-      <router-link to="/budget" style="font-size: 12.5px">去设置 ›</router-link>
     </div>
 
     <!-- 账户余额框架：拖拽排序 / 增删 / 双击设基数 -->
@@ -442,6 +382,77 @@ function signOf(tx: Tx): string {
       <div v-if="recent.length === 0" style="text-align: center; color: var(--zj-text-sub); padding: 30px 0">
         还没有账单，点击上方「导入账单」开始吧
       </div>
+    </div>
+
+      </div>
+      <div class="ov-col-side" style="display: flex; flex-direction: column; gap: 14px; min-width: 0">
+      <div class="zj-card">
+        <div class="stat-title" style="margin-bottom: 10px">时间范围</div>
+        <el-segmented
+          :model-value="ovRange"
+          :options="[{ label: '日', value: 'day' }, { label: '月', value: 'month' }, { label: '年', value: 'year' }]"
+          size="small"
+          style="width: 100%"
+          @change="(v: any) => setOvRange(v)"
+        />
+      </div>
+      <div class="zj-card ov-card stat-card stat-expense" style="flex: 1">
+        <div class="ov-card-head" style="align-items: center">
+          <span class="stat-chip"><el-icon><Coin /></el-icon></span>
+          <span class="stat-title">支出</span>
+        </div>
+        <div class="stat-num zj-num" style="color: var(--zj-expense)">¥ {{ fmtAmount(card1Value()) }}</div>
+        <div class="stat-foot">
+          <span class="stat-vs">{{ RANGE_LABEL[ovRange] }}支出<template v-if="trendPct('expense') !== null"> · 较{{ prevLabel() }}</template></span>
+          <span
+            v-if="trendPct('expense') !== null"
+            class="stat-trend"
+            :class="trendPct('expense')! > 0 ? 'bad' : 'good'"
+          >{{ trendPct('expense')! > 0 ? '↑' : '↓' }} {{ Math.abs(trendPct('expense')!) }}%</span>
+        </div>
+      </div>
+      <div class="zj-card ov-card stat-card stat-income" style="flex: 1">
+        <div class="ov-card-head" style="align-items: center">
+          <span class="stat-chip"><el-icon><Money /></el-icon></span>
+          <span class="stat-title">收入</span>
+        </div>
+        <div class="stat-num zj-num" style="color: var(--zj-income)">¥ {{ fmtAmount(card2Value()) }}</div>
+        <div class="stat-foot">
+          <span class="stat-vs">{{ RANGE_LABEL[ovRange] }}收入<template v-if="trendPct('income') !== null"> · 较{{ prevLabel() }}</template></span>
+          <span
+            v-if="trendPct('income') !== null"
+            class="stat-trend"
+            :class="trendPct('income')! >= 0 ? 'good' : 'bad'"
+          >{{ trendPct('income')! >= 0 ? '↑' : '↓' }} {{ Math.abs(trendPct('income')!) }}%</span>
+        </div>
+      </div>
+      <div class="zj-card ov-card" style="flex: 1">
+        <div class="ov-card-head" style="align-items: center">
+          <span class="stat-chip"><el-icon><Wallet /></el-icon></span>
+          <span class="stat-title">账户总额</span>
+        </div>
+        <div class="stat-num zj-num" :style="{ color: card3Value() < 0 ? 'var(--zj-expense)' : 'var(--zj-text)' }">
+          ¥ {{ fmtAmount(card3Value()) }}
+        </div>
+        <div class="stat-foot">
+          <span class="stat-vs">{{ balances.length }} 个账户</span>
+          <div style="flex: 1" />
+          <el-segmented
+            :model-value="ovRange"
+            :options="[{ label: '日', value: 'day' }, { label: '月', value: 'month' }, { label: '年', value: 'year' }]"
+            size="small"
+            @change="(v: any) => setOvRange(v)"
+          />
+        </div>
+      </div>
+<div class="zj-card ov-actions" style="flex: 1">
+        <el-button type="primary" @click="importVisible = true">
+          <el-icon style="margin-right: 6px"><UploadFilled /></el-icon> 导入账单
+        </el-button>
+        <el-button @click="openEdit(null)">
+          <el-icon style="margin-right: 6px"><EditPen /></el-icon> 手动记账
+        </el-button>
+        <el-button text type="primary" @click="router.push('/stats')">查看统计 →</el-button>      </div>
     </div>
 
     <ImportBillDialog v-model:visible="importVisible" @imported="load" />
@@ -573,6 +584,15 @@ function signOf(tx: Tx): string {
   margin-left: 5px;
   font-size: 11px;
   color: var(--zj-text-sub);
+}
+
+/* 概览图例色点 */
+.ov-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-block;
 }
 
 /* 最近记录的分类稳定色点 */

@@ -145,7 +145,7 @@ onUnmounted(() => {
         </div>
         <nav class="zj-nav">
           <div
-            v-for="nav in navs"
+            v-for="nav in navs.filter((n) => n.path !== '/settings')"
             :key="nav.path"
             class="zj-nav-item"
             :class="{ active: activePath === nav.path }"
@@ -156,6 +156,15 @@ onUnmounted(() => {
             <span class="nav-label">{{ nav.title }}</span>
           </div>
         </nav>
+        <div
+          class="zj-sidebar-footer"
+          :class="{ active: activePath === '/settings' }"
+          title="设置"
+          @click="router.push('/settings')"
+        >
+          <el-icon><component :is="Setting" /></el-icon>
+          <span class="footer-label">设置</span>
+        </div>
         <div class="zj-sidebar-footer" title="切换深浅色" @click="footerToggle">
           <el-icon><component :is="isDark ? Sunny : Moon" /></el-icon>
           <span class="footer-label">{{ footerText }}</span>
