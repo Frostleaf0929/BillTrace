@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { UploadFilled, EditPen, Coin, Money, Wallet, Plus, Delete, CollectionTag } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { api, fmtAmount } from '../api';
+import { SOFT_PALETTE } from '../lib/chartTheme';
 import type { AccountBalance, SummaryStats, Tx, BudgetStatus } from '../types';
 import ImportBillDialog from '../components/ImportBillDialog.vue';
 import TxEditDialog from '../components/TxEditDialog.vue';
@@ -241,6 +242,14 @@ function setBase(acc: AccountBalance) {
   baseVisible.value = true;
 }
 
+// 一级分类稳定色（hash 取柔和色板，同一分类永远同色）
+function catColor(name: string): string {
+  if (!name) return 'var(--zj-border)';
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return SOFT_PALETTE[h % SOFT_PALETTE.length];
+}
+
 function colorOf(tx: Tx): string {
   if (tx.tx_type === '支出' || tx.tx_type === '报销') return 'zj-amount-expense';
   if (tx.tx_type === '收入') return 'zj-amount-income';
@@ -419,6 +428,12 @@ function signOf(tx: Tx): string {
             </template>
             <template v-else-if="col.key === 'amount'">
               <span :class="colorOf(row)"><span class="zj-num">{{ signOf(row) }}{{ fmtAmount(row.amount) }}</span><span class="cur-unit"> {{ row.currency || '' }}</span></span>
+            </template>
+            <template v-else-if="col.key === 'cat'">
+              <span style="display: inline-flex; align-items: center; gap: 7px">
+                <i class="row-dot" :style="{ background: catColor(row.l1 || '') }" />
+                {{ cellOf(row, col.key) }}
+              </span>
             </template>
             <template v-else>{{ cellOf(row, col.key) }}</template>
           </template>

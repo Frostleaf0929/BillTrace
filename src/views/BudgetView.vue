@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Wallet } from '@element-plus/icons-vue';
 import { api, fmtAmount } from '../api';
 import PageSub from '../components/PageSub.vue';
 import type { BudgetStatus, Category } from '../types';
@@ -127,16 +128,18 @@ async function editBudget(category: string) {
       <el-button type="primary" plain size="small" @click="editBudget('')">设置总预算</el-button>
     </div>
 
-    <!-- 总预算执行卡 -->
+    <!-- 总预算执行卡（POS 英雄卡：图标芯片 + 特大数字） -->
     <div v-if="total" class="zj-card" style="margin-bottom: 14px">
-      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px">
-        <span style="font-weight: 600">总预算 · {{ keyLabel }}</span>
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px">
+        <span class="stat-chip"><el-icon><Wallet /></el-icon></span>
+        <span class="stat-title">总预算 · {{ keyLabel }}</span>
+        <div style="flex: 1" />
         <el-button text size="small" @click="editBudget('')">修改</el-button>
       </div>
-      <div style="display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px">
-        <span :style="{ color: barColor(total) }" style="font-size: 30px; font-weight: 700" class="zj-num">¥ {{ fmtAmount(total.spent) }}</span>
-        <span style="color: var(--zj-text-sub)" class="zj-num">/ 预算 ¥ {{ fmtAmount(total.amount) }}</span>
-        <span class="zj-num" style="margin-left: auto; color: var(--zj-text-sub)">
+      <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap">
+        <span class="stat-num zj-num" style="margin: 8px 0" :style="{ color: barColor(total) }">¥ {{ fmtAmount(total.spent) }}</span>
+        <span class="stat-vs zj-num">/ 预算 ¥ {{ fmtAmount(total.amount) }}</span>
+        <span class="stat-vs zj-num" style="margin-left: auto">
           {{ total.spent > total.amount ? '已超支' : '剩余' }}
           <b :style="{ color: total.spent > total.amount ? 'var(--zj-expense)' : 'var(--zj-income)' }">¥ {{ fmtAmount(Math.max(total.amount - total.spent, 0)) }}</b>
         </span>
