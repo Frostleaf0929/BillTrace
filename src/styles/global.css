@@ -664,6 +664,48 @@ html.dark .zj-logo .logo-dot {
 .zj-anchor .budget-track {
   background: rgba(245, 246, 250, 0.14);
 }
+
+/* ---------- 概览两栏布局（POS：左主列 + 右侧栏堆叠卡） ---------- */
+.ov-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 14px;
+  align-items: start;
+}
+.ov-col-main,
+.ov-col-side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ov-col-side .ov-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.ov-col-side .ov-actions .el-button {
+  width: 100%;
+  margin-left: 0 !important;
+  margin-bottom: 10px;
+}
+.ov-col-side .ov-actions .el-button:last-child {
+  margin-bottom: 0;
+}
+@media (max-width: 1100px) {
+  .ov-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 深色模式：收支卡语义色整卡染色（Folia 范式） */
+html.dark .stat-card.stat-expense {
+  background: linear-gradient(160deg, rgba(240, 146, 157, 0.16), rgba(24, 29, 41, 0.92) 68%);
+  border-color: rgba(240, 146, 157, 0.25);
+}
+html.dark .stat-card.stat-income {
+  background: linear-gradient(160deg, rgba(102, 195, 158, 0.16), rgba(24, 29, 41, 0.92) 68%);
+  border-color: rgba(102, 195, 158, 0.25);
+}
 .el-alert {
   border-radius: 12px;
 }

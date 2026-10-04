@@ -268,8 +268,10 @@ function signOf(tx: Tx): string {
     <h1 class="zj-page-title">概览</h1>
     <PageSub page="overview" fallback="今天的你花了多少钱？" />
 
+    <div class="ov-grid">
+      <div class="ov-col-main">
     <div class="zj-row" style="margin-bottom: 14px">
-      <div class="zj-card ov-card" style="flex: 1">
+      <div class="zj-card ov-card stat-card stat-expense" style="flex: 1">
         <div class="ov-card-head" style="align-items: center">
           <span class="stat-chip"><el-icon><Coin /></el-icon></span>
           <span class="stat-title">支出</span>
@@ -284,7 +286,7 @@ function signOf(tx: Tx): string {
           >{{ trendPct('expense')! > 0 ? '↑' : '↓' }} {{ Math.abs(trendPct('expense')!) }}%</span>
         </div>
       </div>
-      <div class="zj-card ov-card" style="flex: 1">
+      <div class="zj-card ov-card stat-card stat-income" style="flex: 1">
         <div class="ov-card-head" style="align-items: center">
           <span class="stat-chip"><el-icon><Money /></el-icon></span>
           <span class="stat-title">收入</span>
@@ -318,48 +320,7 @@ function signOf(tx: Tx): string {
           />
         </div>
       </div>
-      <div class="zj-card ov-actions" style="flex: 1">
-        <el-button type="primary" @click="importVisible = true">
-          <el-icon style="margin-right: 6px"><UploadFilled /></el-icon> 导入账单
-        </el-button>
-        <el-button @click="openEdit(null)">
-          <el-icon style="margin-right: 6px"><EditPen /></el-icon> 手动记账
-        </el-button>
-        <el-button text type="primary" @click="router.push('/stats')">查看统计 →</el-button>
-      </div>
-    </div>
-
-    <!-- 本月总预算执行卡（深色锚点卡，Zona Pro #222026；未设预算时显示引导） -->
-    <div v-if="monthBudget" class="zj-card zj-anchor" style="margin-bottom: 14px">
-      <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap">
-        <span class="stat-title">本月预算</span>
-        <span
-          class="zj-num"
-          :style="{ color: monthBudget.spent > monthBudget.amount ? '#f0929d' : '#f5f6fa' }"
-          style="font-size: 20px; font-weight: 700"
-        >¥ {{ fmtAmount(monthBudget.spent) }}</span>
-        <span class="zj-num" style="color: var(--zj-text-sub); font-size: 12.5px">
-          / ¥ {{ fmtAmount(monthBudget.amount) }} · 已用 {{ ((monthBudget.spent / monthBudget.amount) * 100).toFixed(0) }}%
-        </span>
-        <div style="flex: 1" />
-        <router-link to="/budget" style="font-size: 12.5px">去预算页 ›</router-link>
-      </div>
-      <div style="height: 8px; border-radius: 999px; background: var(--zj-sidebar-hover); overflow: hidden; margin-top: 8px">
-        <i
-          :style="{
-            display: 'block',
-            height: '100%',
-            borderRadius: '999px',
-            width: Math.min(monthBudget.spent / monthBudget.amount, 1) * 100 + '%',
-            background: monthBudget.spent > monthBudget.amount ? 'var(--zj-expense)' : monthBudget.spent / monthBudget.amount > 0.8 ? 'var(--zj-transfer)' : 'var(--zj-primary)',
-          }"
-        />
-      </div>
-    </div>
-    <div v-else class="zj-card" style="margin-bottom: 14px; display: flex; align-items: center; gap: 10px">
-      <span style="color: var(--zj-text-sub); font-size: 13px">本月还没设总预算——设一个，超支前心里有数。</span>
-      <div style="flex: 1" />
-      <router-link to="/budget" style="font-size: 12.5px">去设置 ›</router-link>
+      
     </div>
 
     <!-- 账户余额框架：拖拽排序 / 增删 / 双击设基数 -->
@@ -441,6 +402,53 @@ function signOf(tx: Tx): string {
       </el-table>
       <div v-if="recent.length === 0" style="text-align: center; color: var(--zj-text-sub); padding: 30px 0">
         还没有账单，点击上方「导入账单」开始吧
+      </div>
+    </div>
+
+      </div>
+      <div class="ov-col-side">
+    <!-- 本月总预算执行卡（深色锚点卡，Zona Pro #222026；未设预算时显示引导） -->
+    <div v-if="monthBudget" class="zj-card zj-anchor" style="margin-bottom: 14px">
+      <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap">
+        <span class="stat-title">本月预算</span>
+        <span
+          class="zj-num"
+          :style="{ color: monthBudget.spent > monthBudget.amount ? '#f0929d' : '#f5f6fa' }"
+          style="font-size: 20px; font-weight: 700"
+        >¥ {{ fmtAmount(monthBudget.spent) }}</span>
+        <span class="zj-num" style="color: var(--zj-text-sub); font-size: 12.5px">
+          / ¥ {{ fmtAmount(monthBudget.amount) }} · 已用 {{ ((monthBudget.spent / monthBudget.amount) * 100).toFixed(0) }}%
+        </span>
+        <div style="flex: 1" />
+        <router-link to="/budget" style="font-size: 12.5px">去预算页 ›</router-link>
+      </div>
+      <div style="height: 8px; border-radius: 999px; background: var(--zj-sidebar-hover); overflow: hidden; margin-top: 8px">
+        <i
+          :style="{
+            display: 'block',
+            height: '100%',
+            borderRadius: '999px',
+            width: Math.min(monthBudget.spent / monthBudget.amount, 1) * 100 + '%',
+            background: monthBudget.spent > monthBudget.amount ? 'var(--zj-expense)' : monthBudget.spent / monthBudget.amount > 0.8 ? 'var(--zj-transfer)' : 'var(--zj-primary)',
+          }"
+        />
+      </div>
+    </div>
+    <div v-else class="zj-card" style="margin-bottom: 14px; display: flex; align-items: center; gap: 10px">
+      <span style="color: var(--zj-text-sub); font-size: 13px">本月还没设总预算——设一个，超支前心里有数。</span>
+      <div style="flex: 1" />
+      <router-link to="/budget" style="font-size: 12.5px">去设置 ›</router-link>
+    </div>
+
+<div class="zj-card ov-actions" style="flex: 1">
+        <el-button type="primary" @click="importVisible = true">
+          <el-icon style="margin-right: 6px"><UploadFilled /></el-icon> 导入账单
+        </el-button>
+        <el-button @click="openEdit(null)">
+          <el-icon style="margin-right: 6px"><EditPen /></el-icon> 手动记账
+        </el-button>
+        <el-button text type="primary" @click="router.push('/stats')">查看统计 →</el-button>
+      </div>
       </div>
     </div>
 

@@ -240,7 +240,13 @@ function signOf(tx: Tx): string {
         border: pendingUrgent ? '1px solid var(--zj-expense)' : '1px solid var(--zj-border)',
       }"
     >
-      <el-icon :color="pendingUrgent ? 'var(--zj-expense)' : 'var(--zj-text-sub)'"><Bell /></el-icon>
+      <span
+        class="stat-chip"
+        :style="{
+          background: pendingUrgent ? 'rgba(240, 146, 157, 0.16)' : 'var(--zj-sidebar-active)',
+          color: pendingUrgent ? 'var(--zj-expense)' : 'var(--zj-sidebar-active-text)',
+        }"
+      ><el-icon><Bell /></el-icon></span>
       <span>有商家记录待归类</span>
       <el-button :type="pendingUrgent ? 'danger' : 'default'" size="small" @click="openPending">去归类</el-button>
       <transition name="pop">
