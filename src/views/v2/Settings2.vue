@@ -10,6 +10,7 @@ import {
 } from '../../theme';
 import { icon } from '../../v2/icons';
 import ImportBillDialog from '../../components/ImportBillDialog.vue';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { toast } from '../../v2/toast';
 
 const dataDir = ref('');
@@ -76,6 +77,9 @@ async function doBackup(): Promise<void> {
   } catch (e) {
     toast(`备份失败：${e}`);
   }
+}
+function openGithub(): void {
+  openUrl('https://github.com/Frostleaf0929').catch(() => { /* 忽略 */ });
 }
 async function doClear(scope: 'tx' | 'all'): Promise<void> {
   const msg = scope === 'tx'
@@ -215,9 +219,21 @@ async function doClear(scope: 'tx' | 'all'): Promise<void> {
       <div class="v2-card span5">
         <div class="v2-card-head"><h3>关于</h3></div>
         <div style="color:var(--v2-ink-2);font-size:13px;line-height:1.9">
-          账痕 BillTrace · v0.4.0-ui2<br>
-          绿色便携的本地账单管理 · 数据 100% 本地存储<br>
-          本页为 UI v2 重构版（redesign 分支），设计规范见仓库外 DESIGN.md。
+          账痕 BillTrace · v0.4.0<br>
+          绿色便携的本地账单管理 · 数据 100% 本地存储
+        </div>
+      </div>
+      <div class="v2-card span7">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div>
+            <div style="font-weight:700;font-size:15px">作者</div>
+            <div style="color:var(--v2-ink-3);font-size:12px;margin-top:2px">Frostleaf0929 · GitHub 主页</div>
+          </div>
+          <div style="flex:1" />
+          <button class="v2-btn ghost" style="height:36px" @click="openGithub">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.94c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.78 1.05.78 2.12v3.14c0 .3.21.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+            Frostleaf0929
+          </button>
         </div>
       </div>
     </div>

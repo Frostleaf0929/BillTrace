@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import { api } from '../api';
 import type { Category, AccountBalance } from '../types';
 import { catColor, catIcon } from './icons';
+import { ElMessageBox } from 'element-plus';
 
 const props = defineProps<{ visible: boolean }>();
 const emit = defineEmits<{ close: []; saved: [] }>();
@@ -59,6 +60,15 @@ watch(() => props.visible, async (v) => {
   note.value = '';
   setTimeout(() => (document.getElementById('v2-qa-amount') as HTMLInputElement | null)?.focus(), 240);
 });
+
+async function addL1(): Promise<void> {
+  const kind = type.value === 'income' ? 'income' : 'expense';
+  const res = await ElMessageBox.prompt('新增一级分类名称', '新增一级', { inputPattern: /\S+/, inputErrorMessage: '名称不能为空' }).catch(() => null);
+  if (!res) return;
+  await api.saveCategory({ kind, parent_id: null, name: res.value.trim() });
+  await loadRefs();
+  l1.value = res.value.trim();
+}
 
 async function save(keep: boolean): Promise<void> {
   const amt = Math.abs(parseFloat(amount.value) || 0);
@@ -124,7 +134,11 @@ function onKey(e: KeyboardEvent): void {
           <i :style="{ background: catColor(c) }" /><span v-html="catIcon(c, 13)" />{{ c }}
         </button>
       </div>
-      <div v-if="l2Options.length" class="v2-field-label">二级分类（可选）</div>
+      <div v-if="l2Options.length" class="v2-field-label" style="display:flex;align-items:center">
+        二级分类（可选）
+        <span style="flex:1" />
+        <button class="v2-link-btn" style="font-size:12px" @click="addL1">＋新建一级</button>
+      </div>
       <select v-model="l2" class="v2-select" style="width:100%">
         <option value="">不选</option>
         <option v-for="o in l2Options" :key="o" :value="o">{{ o }}</option>

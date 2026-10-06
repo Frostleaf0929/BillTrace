@@ -39,7 +39,11 @@ const rankData = ref<PiePoint[]>([]);
 const rankHtml = ref('');
 
 const l1Options = computed(() => [...new Set(cats.value.filter((c) => c.kind === 'expense' && c.parent_id === null).map((c) => c.name))]);
-const l2Options = computed(() => cats.value.filter((c) => c.parent_id !== null && c.name === moveL1.value).map((c) => c.name));
+const l2Options = computed(() => {
+  const parent = cats.value.find((c) => c.parent_id === null && c.name === moveL1.value);
+  if (!parent) return [];
+  return cats.value.filter((c) => c.parent_id === parent.id).map((c) => c.name);
+});
 const moveL1 = ref('');
 const moveL2 = ref('');
 
@@ -143,6 +147,19 @@ function toggleCheck(ev: Event, id: number): void {
   else s.add(id);
   checked.value = s;
 }
+async function newL1(): Promise<void> {
+  const res = await ElMessageBox.prompt('新增一级分类名称（支出类）', '新增分类', { inputPattern: /\S+/, inputErrorMessage: '名称不能为空' }).catch(() => null);
+  if (!res) return;
+  try {
+    await api.saveCategory({ kind: 'expense', parent_id: null, name: res.value.trim() });
+    await loadRefs();
+    moveL1.value = res.value.trim();
+    toast('已创建并选中');
+  } catch (e) {
+    ElMessage.error(String(e));
+  }
+}
+
 async function batchDelete(): Promise<void> {
   const n = checked.value.size;
   try {
@@ -289,6 +306,7 @@ function onRankClick(e: MouseEvent): void {
           <option value="">移动到…</option>
           <option v-for="o in l1Options" :key="o" :value="o">{{ o }}</option>
         </select>
+        <button class="bb-btn" title="新建一级分类" @click="newL1">＋新建</button>
         <select v-if="moveL1 && l2Options.length" v-model="moveL2" class="v2-select" style="height:34px">
           <option value="">二级（可选）</option>
           <option v-for="o in l2Options" :key="o" :value="o">{{ o }}</option>

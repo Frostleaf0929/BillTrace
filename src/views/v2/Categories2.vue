@@ -6,6 +6,7 @@ import { api } from '../../api';
 import type { Category } from '../../types';
 import { icon, catColor, catIcon } from '../../v2/icons';
 import PresetImportDialog from '../../components/PresetImportDialog.vue';
+import type { Rule } from '../../types';
 import { toast } from '../../v2/toast';
 
 type Kind = 'expense' | 'income' | 'account';
@@ -14,6 +15,46 @@ const all = ref<Category[]>([]);
 const sums = ref<Record<string, number>>({});
 const openIds = ref<Set<number>>(new Set());
 const presetVisible = ref(false);
+const rulesList = ref<Rule[]>([]);
+
+async function loadRules(): Promise<void> {
+  try { rulesList.value = await api.listRules(); } catch { rulesList.value = []; }
+}
+async function toggleRule(r: Rule): Promise<void> {
+  try {
+    await api.saveRule({ id: r.id, keyword: r.keyword, kind: r.kind, l1: r.l1, l2: r.l2, priority: r.priority, enabled: !r.enabled });
+    await loadRules();
+  } catch (e) {
+    toast(`规则更新失败：${e}`);
+  }
+}
+async function editRule(r: Rule): Promise<void> {
+  try {
+    const res = await ElMessageBox.prompt('修改规则映射（格式：关键词 | 一级分类 | 二级分类可选）', '编辑规则', {
+      inputValue: `${r.keyword} | ${r.l1} | ${r.l2 ?? ''}`,
+    }).catch(() => null);
+    if (!res) return;
+    const [kw, l1, l2] = res.value.split('|').map((x) => x.trim());
+    if (!kw || !l1) { toast('格式不对：至少需要 关键词 和 一级分类'); return; }
+    await api.saveRule({ id: r.id, keyword: kw, kind: r.kind, l1, l2: l2 || null, priority: r.priority, enabled: r.enabled });
+    await loadRules();
+    toast('规则已更新');
+  } catch (e) {
+    toast(`规则更新失败：${e}`);
+  }
+}
+async function delRule(r: Rule): Promise<void> {
+  try {
+    await ElMessageBox.confirm(`删除规则「${r.keyword} → ${r.l1}」？`, '删除规则', { type: 'warning' });
+  } catch { return; }
+  try {
+    await api.deleteRule(r.id);
+    await loadRules();
+    toast('规则已删除');
+  } catch (e) {
+    toast(`删除失败：${e}`);
+  }
+}
 
 const KINDS: [Kind, string][] = [['expense', '支出'], ['income', '收入'], ['account', '账户']];
 
@@ -168,7 +209,7 @@ async function applyRules(): Promise<void> {
   }
 }
 
-onMounted(load);
+onMounted(() => { load(); loadRules(); });
 
 // ---------- 拖拽移动（HTML5 DnD：上/内/下 三段判定） ----------
 const dragId = ref<number | null>(null);
@@ -309,7 +350,32 @@ onMounted(() => {
           <b style="color:var(--v2-ink)">先导账单后导规则？</b><br>
           点「把规则应用到已有账单」：待确认队列按规则自动归类，已入库的未分类账单批量补分类——顺序无关。<br><br>
           <b style="color:var(--v2-ink)">拖拽移动</b><br>
-          树行拖拽改层级 / 排序已在旧版实现，本页下一批接入。
+          树行拖拽改层级 / 排序已支持（拖到目标行的上 / 中 / 下分别表示排前面 / 变子级 / 排后面）。
+        </div>
+      </div>
+      <div class="v2-card span4">
+        <div class="v2-card-head">
+          <h3>已学习规则 · {{ rulesList.length }}</h3>
+          <div class="spacer" />
+        </div>
+        <div style="color:var(--v2-ink-3);font-size:12px;margin:-8px 0 10px">导入与待确认归类时自动沉淀 · 关用后不再自动分类 · 最多显示 30 条</div>
+        <div style="max-height:330px;overflow-y:auto">
+          <div v-for="r in rulesList.slice(0, 30)" :key="r.id" class="v2-bud-row">
+            <div class="bud-main">
+              <div class="v2-bud-top">
+                <span class="v2-bud-name">{{ r.keyword }}</span>
+                <span class="v2-pill" :class="r.source === 'learned' ? 'warnp' : 'grayp'">{{ r.source === 'learned' ? '学习' : '预设' }}</span>
+                <span class="v2-bud-nums">{{ r.l1 }}{{ r.l2 ? ' · ' + r.l2 : '' }}</span>
+              </div>
+              <div style="font-size:11px;color:var(--v2-ink-3)">{{ r.kind === 'income' ? '收入' : '支出' }}规则 · 优先级 {{ r.priority }}</div>
+            </div>
+            <button class="v2-toggle" :class="{ on: r.enabled }" title="启用 / 停用" @click="toggleRule(r)" />
+            <button class="v2-icon-btn" title="编辑" @click="editRule(r)" v-html="icon('edit', 14)" />
+            <button class="v2-icon-btn" title="删除" @click="delRule(r)" v-html="icon('trash', 14)" />
+          </div>
+          <div v-if="!rulesList.length" style="padding:20px;text-align:center;color:var(--v2-ink-3);font-size:12.5px">
+            还没有沉淀规则——待确认归类或「应用到已有账单」后会出现在这里
+          </div>
         </div>
       </div>
     </div>

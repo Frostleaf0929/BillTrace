@@ -706,3 +706,13 @@ html.no-motion .v2-anim .line { stroke-dasharray: none; stroke-dashoffset: 0; }
   box-shadow: 0 12px 30px rgba(26, 31, 51, 0.18);
   z-index: 2;
 }
+
+/* 面板内字段高度统一（与类型/分类控件一致），日期日历图标内移留出右边空间 */
+.v2-panel .v2-text-input,
+.v2-panel .v2-select,
+.v2-panel input[type='date'] {
+  height: 40px;
+}
+.v2-panel .v2-seg button { height: 34px; }
+.v2-panel input[type='date'] { padding-right: 30px; }
+.v2-panel input[type='date']::-webkit-calendar-picker-indicator { margin-right: 10px; }

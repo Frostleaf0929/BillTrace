@@ -101,6 +101,7 @@ export async function exportStatsAsPng(root: HTMLElement, name: string): Promise
   // ── 逐卡复刻 ──
   for (const card of Array.from(root.querySelectorAll('.v2-card'))) {
     const cr = rel(card.getBoundingClientRect());
+    const varsCard = cssVars(card as HTMLElement); // --p-* 定义在 .v2-paper 上，必须按卡取
     if (cr.w < 10 || cr.y + cr.h < 0 || cr.y > H) continue;
     // 卡底（paper 卡用同色 surface，普通卡同）——统一画 surface 底 + 描边
     ctx.fillStyle = surface;
@@ -109,8 +110,6 @@ export async function exportStatsAsPng(root: HTMLElement, name: string): Promise
     ctx.strokeStyle = line;
     ctx.stroke();
 
-    const pc = card.classList.contains('v2-paper');
-    const varsCard = pc ? vars : vars;
 
     // p-h2 / p-sub（纸卡）或 h3（普通卡）
     const h2 = card.querySelector('.p-h2');
