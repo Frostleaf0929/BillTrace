@@ -16,9 +16,16 @@ const sums = ref<Record<string, number>>({});
 const openIds = ref<Set<number>>(new Set());
 const presetVisible = ref(false);
 const rulesList = ref<Rule[]>([]);
+const rulePage = ref(1);
+const RULE_PAGE_SIZE = 6;
+const ruleTotalPages = computed(() => Math.max(1, Math.ceil(rulesList.value.length / RULE_PAGE_SIZE)));
+const pagedRules = computed(() =>
+  rulesList.value.slice((rulePage.value - 1) * RULE_PAGE_SIZE, rulePage.value * RULE_PAGE_SIZE),
+);
 
 async function loadRules(): Promise<void> {
   try { rulesList.value = await api.listRules(); } catch { rulesList.value = []; }
+  if (rulePage.value > ruleTotalPages.value) rulePage.value = ruleTotalPages.value;
 }
 async function toggleRule(r: Rule): Promise<void> {
   try {
@@ -357,10 +364,10 @@ onMounted(() => {
         <div class="v2-card-head">
           <h3>已学习规则 · {{ rulesList.length }}</h3>
           <div class="spacer" />
-          <span style="color:var(--v2-ink-3);font-size:12px">导入与待确认归类时自动沉淀 · 关用后不再自动分类 · 最多显示 30 条</span>
+          <span style="color:var(--v2-ink-3);font-size:12px">导入与待确认归类时自动沉淀 · 关用后不再自动分类 · 每页 6 条</span>
         </div>
-        <div style="max-height:320px;overflow-y:auto">
-          <div v-for="r in rulesList.slice(0, 30)" :key="r.id" class="v2-rank-row" style="cursor:default">
+        <div>
+          <div v-for="r in pagedRules" :key="r.id" class="v2-rank-row" style="cursor:default">
             <span class="rk-name" style="width:auto;max-width:220px">{{ r.keyword }}</span>
             <span class="v2-pill" :class="r.source === 'learned' ? 'warnp' : 'grayp'">{{ r.source === 'learned' ? '学习' : '预设' }}</span>
             <span style="color:var(--v2-ink-2);font-size:12.5px">{{ r.l1 }}{{ r.l2 ? ' · ' + r.l2 : '' }}</span>
@@ -372,6 +379,16 @@ onMounted(() => {
           <div v-if="!rulesList.length" style="padding:20px;text-align:center;color:var(--v2-ink-3);font-size:12.5px">
             还没有沉淀规则——待确认归类或「应用到已有账单」后会出现在这里
           </div>
+        </div>
+        <div v-if="rulesList.length" style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--v2-line)">
+          <span style="font-size:12px;color:var(--v2-ink-3)">第 {{ rulePage }} / {{ ruleTotalPages }} 页 · 共 {{ rulesList.length }} 条</span>
+          <div style="flex:1" />
+          <button class="v2-icon-btn" style="border:1px solid var(--v2-line)" :disabled="rulePage <= 1" :style="{ opacity: rulePage <= 1 ? 0.35 : 1 }" @click="rulePage--">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 6l-6 6 6 6"/></svg>
+          </button>
+          <button class="v2-icon-btn" style="border:1px solid var(--v2-line)" :disabled="rulePage >= ruleTotalPages" :style="{ opacity: rulePage >= ruleTotalPages ? 0.35 : 1 }" @click="rulePage++">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9.5 6l6 6-6 6"/></svg>
+          </button>
         </div>
       </div>
     </div>
