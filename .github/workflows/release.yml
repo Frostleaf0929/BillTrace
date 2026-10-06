@@ -52,3 +52,18 @@ jobs:
           cp "$exe" "BillTrace_${{ github.ref_name }}_x64.exe"
           gh release upload "${{ github.ref_name }}" "BillTrace_${{ github.ref_name }}_x64.exe" --clobber
         shell: bash
+
+      # 中文 productName（账痕）在 tauri-action 上传的资产名里会被剥掉、只剩 "_0.4.0_x64-setup.exe"
+      # 这种残缺名，统一改写成英文名 BillTrace_<tag>_x64-setup.exe
+      - name: 规整安装包资产名
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" -p "*-setup.exe" -D _setup --clobber || true
+          old=$(ls _setup 2>/dev/null | grep -v '^BillTrace' | grep -- '-setup.exe' | head -1 || true)
+          if [ -n "$old" ]; then
+            mv "_setup/$old" "_setup/BillTrace_${{ github.ref_name }}_x64-setup.exe"
+            gh release upload "${{ github.ref_name }}" "_setup/BillTrace_${{ github.ref_name }}_x64-setup.exe" --clobber
+            gh release delete-asset "${{ github.ref_name }}" "$old" -y
+          fi
+        shell: bash
