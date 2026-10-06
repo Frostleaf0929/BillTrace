@@ -60,11 +60,12 @@ function isActive(t: { span: number; all?: boolean }): boolean {
   return statRange.value[0] === i0 && statRange.value[1] === i1;
 }
 const exporting = ref(false);
+const pageRoot = ref<HTMLElement>();
 async function exportPage(): Promise<void> {
   if (exporting.value) return;
   exporting.value = true;
   try {
-    const el = document.querySelector('#page-stats > div') as HTMLElement;
+    const el = pageRoot.value; if (!el) { toast('页面未就绪，稍后再试'); return; }
     const d = new Date();
     const name = `账痕-统计-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.png`;
     const path = await exportElementAsPng(el, name);
@@ -165,7 +166,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
+  <div ref="pageRoot">
     <div class="v2-pagehead">
       <div>
         <h1>统计</h1>
