@@ -6,6 +6,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { api } from '../../api';
 import type { AccountBalance, ChartPoint, SummaryStats, Tx } from '../../types';
 import { icon, catColor, catIcon } from '../../v2/icons';
+import { monthLabel } from '../../v2/parts';
 import TsChart from '../../v2/TsChart.vue';
 import TxPanel from '../../v2/TxPanel.vue';
 import { toast } from '../../v2/toast';
@@ -138,11 +139,20 @@ async function loadTrend(): Promise<void> {
   const from = new Date(now.getFullYear(), now.getMonth() - 13, 1);
   const f = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
   try {
-    trend.value = await api.statsChart('month', f(from), f(now));
-    trendMonths.value = trend.value.map((_, i) => {
+    const pts = await api.statsChart('month', f(from), f(now));
+    // 后端只回有数据的月份（label = 'YYYY-MM'），客户端按最近 14 个月补零对齐
+    const byKey = new Map(pts.map((p2) => [p2.label, p2]));
+    const arr: ChartPoint[] = [];
+    const meta: { y: number; m: number }[] = [];
+    for (let i = 0; i < 14; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - 13 + i, 1);
-      return { y: d.getFullYear(), m: d.getMonth() + 1 };
-    });
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const p2 = byKey.get(key);
+      arr.push(p2 ?? { label: monthLabel(d.getFullYear(), d.getMonth() + 1), income: 0, expense: 0 });
+      meta.push({ y: d.getFullYear(), m: d.getMonth() + 1 });
+    }
+    trend.value = arr;
+    trendMonths.value = meta;
   } catch { trend.value = []; }
 }
 

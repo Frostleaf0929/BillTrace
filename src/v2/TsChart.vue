@@ -61,7 +61,6 @@ const plotH = H - PAD_T - PAD_B;
 function xAt(i: number): number { return PAD_L + (n.value === 1 ? plotW.value / 2 : (plotW.value * i) / (n.value - 1)); }
 function yAt(v: number): number { return PAD_T + plotH * (1 - v / maxV.value); }
 function yTick(v: number): string { return v >= 1000 ? `${Math.round(v / 100) / 10}k` : String(Math.round(v)); }
-
 const grid = computed(() => {
   let s = '';
   for (let k = 0; k <= 3; k++) {
@@ -77,12 +76,24 @@ const grid = computed(() => {
   return s;
 });
 
-const pathOf = (key: 'expense' | 'income') => data.value.map((d, i) => `${i ? 'L' : 'M'}${xAt(i)},${yAt(d[key])}`).join(' ');
+// Catmull-Rom → 贝塞尔平滑（点间拟合曲线，代替生硬折线）
+function smooth(pts: [number, number][]): string {
+  if (pts.length < 2) return pts.length ? `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}` : '';
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+const smoothOf = (key: 'expense' | 'income') => smooth(data.value.map((d, i) => [xAt(i), yAt(d[key])] as [number, number]));
 const body = computed(() => {
   if (!n.value) return '';
-  let s = `<path d="${pathOf('expense')} L${xAt(n.value - 1)},${PAD_T + plotH} L${xAt(0)},${PAD_T + plotH} Z" fill="var(--zj-primary)" opacity=".07"/>`;
-  s += `<path class="line" d="${pathOf('expense')}" fill="none" stroke="var(--zj-expense)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
-  s += `<path class="line" d="${pathOf('income')}" fill="none" stroke="var(--zj-income)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  let s = `<path d="${smoothOf('expense')} L${xAt(n.value - 1).toFixed(1)},${PAD_T + plotH} L${xAt(0).toFixed(1)},${PAD_T + plotH} Z" fill="var(--zj-primary)" opacity=".07"/>`;
+  s += `<path class="line" d="${smoothOf('expense')}" fill="none" stroke="var(--zj-expense)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+  s += `<path class="line" d="${smoothOf('income')}" fill="none" stroke="var(--zj-income)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
   s += `<path class="dotin" d="${data.value.map((d, i) => `${i ? 'L' : 'M'}${xAt(i)},${yAt(d.income - d.expense)}`).join(' ')}" fill="none" stroke="var(--v2-ink-3)" stroke-width="1.4" stroke-dasharray="4 4"/>`;
   data.value.forEach((d, i) => {
     s += `<circle cx="${xAt(i)}" cy="${yAt(d.expense)}" r="2.8" fill="var(--zj-expense)"/><circle cx="${xAt(i)}" cy="${yAt(d.income)}" r="2.4" fill="var(--zj-income)"/>`;

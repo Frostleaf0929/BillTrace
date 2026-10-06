@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus';
 import { api } from '../../api';
 import type { ChartPoint, Tx } from '../../types';
 import { icon } from '../../v2/icons';
+import { monthLabel } from '../../v2/parts';
 import PaperCard from '../../v2/PaperCard.vue';
 import {
   buildLedgerCard, buildDotHeatCard, buildDonutCard, buildWaterfallCard,
@@ -73,19 +74,35 @@ async function load(): Promise<void> {
   try {
     const now = new Date();
     const series = await api.statsChart('month', '2000-01-01', `${now.getFullYear()}-12-31`);
-    // 头部裁掉全零前缀，尾部裁掉未来空月
-    let firstIdx = series.findIndex((p) => p.expense > 0 || p.income > 0);
-    if (firstIdx < 0) firstIdx = Math.max(0, series.length - 14);
-    let endIdx = series.length - 1;
-    while (endIdx > firstIdx && series[endIdx].expense === 0 && series[endIdx].income === 0) endIdx--;
-    const trimmed = series.slice(firstIdx, endIdx + 1);
-    all.value = trimmed;
-    // series[0] 对应 2000-01（后端按月聚合从该日期起），用绝对序号推算年月，避免尾部错位
-    months.value = trimmed.map((_, k) => {
-      const abs = firstIdx + k;
-      return { y: 2000 + Math.floor(abs / 12), m: (abs % 12) + 1 };
-    });
-    const i1 = trimmed.length - 1;
+    // 后端只返回有数据的月份（GROUP BY 无补零），label = 'YYYY-MM'。
+    // 客户端补零成连续月序列：首末数据月之间逐月填 0，年月直接从 label 解析（不再按位置推算）。
+    const byKey = new Map(series.map((p) => [p.label, p]));
+    const keysWithData = [...byKey.keys()]
+      .filter((k) => { const p = byKey.get(k)!; return p.expense > 0 || p.income > 0; })
+      .sort();
+    if (!keysWithData.length) {
+      all.value = [];
+      months.value = [];
+      txs.value = [];
+      cards.value = { ledger: '', heat: '', donut: '', fall: '', income: '', almanac: '', patch: '', rows: '' };
+      return;
+    }
+    const firstKey = keysWithData[0];
+    const lastKey = keysWithData[keysWithData.length - 1];
+    let y = Number(firstKey.slice(0, 4)), m = Number(firstKey.slice(5, 7));
+    const endY = Number(lastKey.slice(0, 4)), endM = Number(lastKey.slice(5, 7));
+    const filled: ChartPoint[] = [];
+    const meta: { y: number; m: number }[] = [];
+    while (y < endY || (y === endY && m <= endM)) {
+      const key = `${y}-${String(m).padStart(2, '0')}`;
+      const p = byKey.get(key);
+      filled.push(p ?? { label: monthLabel(y, m), income: 0, expense: 0 });
+      meta.push({ y, m });
+      m++; if (m > 12) { m = 1; y++; }
+    }
+    all.value = filled;
+    months.value = meta;
+    const i1 = filled.length - 1;
     if (statRange.value[1] > i1 || statRange.value[0] > i1) statRange.value = [Math.max(0, i1 - 11), i1];
     await reloadTxs();
     rebuild();

@@ -220,7 +220,7 @@ function onRankClick(e: MouseEvent): void {
             <button :class="{ on: scope === 'all' }" @click="scope = 'all'; load()">全部</button>
           </div>
         </div>
-        <div style="border-top:1px solid var(--v2-line);max-height:calc(100vh - 380px);overflow-y:auto;padding-right:4px">
+        <div style="border-top:1px solid var(--v2-line);max-height:calc(100vh - 300px);overflow-y:auto;padding-right:4px">
           <div v-for="g in dayGroups" :key="g.date">
             <div class="v2-day-head"><span>{{ g.label }}</span><span class="net">净 {{ g.net < 0 ? '-' : '+' }}{{ fmtAmount(Math.abs(g.net)) }}</span></div>
             <div

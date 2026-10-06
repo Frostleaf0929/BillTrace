@@ -300,7 +300,15 @@ export function buildAlmanacCard(win: Win): string {
     rows.forEach((r, i) => { const v = r.cats[c] || 0; if (v > best) { best = v; bi = i; } });
     colPeak[c] = bi;
   }
-  const mainCat = rows.map((r) => cols.reduce((a2, b2) => ((r.cats[b2] || 0) > (r.cats[a2] || 0) ? b2 : a2)));
+  // 主力分类：for 循环取最大，避免 cols 为空时 reduce 无初始值抛错
+  const mainCat = rows.map((r) => {
+    let best = '', bestV = -1;
+    for (const c of cols) {
+      const v = r.cats[c] || 0;
+      if (v > bestV) { bestV = v; best = c; }
+    }
+    return best;
+  });
   vals.sort((x, y) => y.v - x.v);
   const top3 = vals.slice(0, 3);
   const top1 = vals[0];
