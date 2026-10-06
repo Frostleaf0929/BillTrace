@@ -3,35 +3,30 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { Odometer, CollectionTag, Memo, TrendCharts, Wallet, Setting, Moon, Sunny, Minus, Close } from '@element-plus/icons-vue';
+import { Minus, Close } from '@element-plus/icons-vue';
 import { api } from './api';
 import {
   initAppearance, isDark, themeMode, toggleTheme, brightnessOverlayStyle,
   bgEnabled, bgPath, bgFit, bgStamp,
 } from './theme';
+import { icon } from './v2/icons';
+import { openQuickAdd, quickVisible, loadUiPrefs } from './v2/ui';
+import QuickAdd from './v2/QuickAdd.vue';
+import { toasts, kill, toast } from './v2/toast';
 
 const route = useRoute();
 const router = useRouter();
 const appWin = getCurrentWindow();
 
-const collapsed = ref(false);
-
 const navs = [
-  { path: '/overview', title: '概览', icon: Odometer },
-  { path: '/categories', title: '分类', icon: CollectionTag },
-  { path: '/detail', title: '详细', icon: Memo },
-  { path: '/stats', title: '统计', icon: TrendCharts },
-  { path: '/budget', title: '预算', icon: Wallet },
-  { path: '/settings', title: '设置', icon: Setting },
+  { path: '/overview', title: '概览', ic: 'overview' },
+  { path: '/detail', title: '明细', ic: 'list' },
+  { path: '/stats', title: '统计', ic: 'stats' },
+  { path: '/budget', title: '预算', ic: 'budget' },
+  { path: '/categories', title: '分类', ic: 'cats' },
 ];
 
 const activePath = computed(() => '/' + route.path.split('/')[1]);
-const activeIndex = computed(() => navs.findIndex((n) => n.path === activePath.value));
-
-const footerText = computed(() => {
-  const cur = isDark.value ? '深色' : '浅色';
-  return themeMode.value === 'system' ? `跟随系统 · ${cur}` : `${cur}模式`;
-});
 
 const overlayStyle = computed(() => brightnessOverlayStyle());
 
@@ -50,59 +45,64 @@ const bgStyle = computed(() => {
   return base;
 });
 
-// ---------- 滚动换页：页底"持续"下滚 → 下一页；页顶持续上滚 → 上一页 ----------
-// 判定加严（用户验收反馈）：400ms 内累计滚动量 ≥300 才触发，防止轻滚误切
+// ---------- 滚动换页（保留旧版能力） ----------
 const wheelNavEnabled = ref(true);
 let wheelCooldown = 0;
 let wheelAcc = 0;
 let wheelAccAt = 0;
 
 function onMainWheel(e: WheelEvent) {
-  // 弹窗/下拉浮层内的滚动属于弹窗自己，禁止触发换页
-  // （否则弹窗内滚到边界会把滚动"接力"给主容器，整页被切走，弹窗随之消失）
   const t = e.target as HTMLElement | null;
-  if (t && t.closest('.el-overlay, .el-dialog, .el-message-box, .el-popper, .el-select-dropdown')) return;
+  if (t && t.closest('.el-overlay, .el-dialog, .el-message-box, .el-popper, .el-select-dropdown, .v2-panel, .v2-overlay')) return;
   if (!wheelNavEnabled.value) return;
   const el = e.currentTarget as HTMLElement;
   if (!el) return;
   const now = Date.now();
   if (now < wheelCooldown) return;
-  if (now - wheelAccAt > 400) wheelAcc = 0; // 停顿超过 400ms 重新累计
+  if (now - wheelAccAt > 400) wheelAcc = 0;
   wheelAccAt = now;
   wheelAcc += e.deltaY;
   const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
   const atTop = el.scrollTop <= 2;
+  const idx = navs.findIndex((n) => n.path === activePath.value);
   let target = -1;
-  if (atBottom && wheelAcc >= 300) target = activeIndex.value + 1;
-  else if (atTop && wheelAcc <= -300) target = activeIndex.value - 1;
-  if (target < 0 || target >= navs.length || target === activeIndex.value) return;
+  if (atBottom && wheelAcc >= 300) target = idx + 1;
+  else if (atTop && wheelAcc <= -300) target = idx - 1;
+  if (target < 0 || target >= navs.length || target === idx) return;
   wheelAcc = 0;
   wheelCooldown = now + 800;
   router.push(navs[target].path);
 }
 
-// ---------- 缩放防卡顿：窗口调整大小时临时关闭毛玻璃 ----------
+// ---------- 缩放防卡顿 ----------
 let resizeTimer: ReturnType<typeof setTimeout> | undefined;
 let unlistenResize: (() => void) | undefined;
 
-async function toggleSidebar() {
-  collapsed.value = !collapsed.value;
-  try { await api.setSetting('sidebarCollapsed', String(collapsed.value)); } catch { /* 忽略 */ }
+function themeIcon(): string {
+  return icon(isDark.value ? 'sun' : 'moon', 19);
 }
-
-function footerToggle(e: MouseEvent) {
+function onThemeToggle(e: MouseEvent): void {
   toggleTheme({ x: e.clientX || window.innerWidth - 70, y: e.clientY || window.innerHeight - 60 });
+}
+function onQuickSaved(): void {
+  toast('已记一笔');
+  window.dispatchEvent(new CustomEvent('v2-refresh'));
 }
 
 onMounted(async () => {
   await initAppearance();
+  await loadUiPrefs();
   try {
-    collapsed.value = (await api.getSetting('sidebarCollapsed')) === 'true';
     wheelNavEnabled.value = (await api.getSetting('wheelNav')) !== 'false';
   } catch { /* 默认值 */ }
-  // 设置页的滚动换页开关实时同步（此前只在启动时读一次，开关无效）
   window.addEventListener('zj-wheel-nav', (ev) => {
     wheelNavEnabled.value = (ev as CustomEvent).detail !== false;
+  });
+  window.addEventListener('keydown', (ev) => {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'n') {
+      ev.preventDefault();
+      openQuickAdd();
+    }
   });
   unlistenResize = await appWin.onResized(() => {
     document.documentElement.classList.add('resizing');
@@ -132,54 +132,52 @@ onUnmounted(() => {
     <div class="zj-brightness" :style="overlayStyle as any" />
 
     <div class="zj-layout">
-      <aside class="zj-sidebar" :class="{ collapsed }">
-        <div class="zj-logo" :title="collapsed ? '展开侧边栏' : '收起侧边栏'" @click="toggleSidebar">
-          <div class="logo-dot">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
-              <path d="M4.5 16.2 L10 10.5 L13.6 13 L19.5 6.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
-              <circle cx="19.5" cy="6.8" r="1.7" fill="currentColor" />
-              <path d="M4.5 20 H11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity="0.55" />
-            </svg>
-          </div>
-          <div class="logo-name">账痕</div>
+      <!-- v2 侧栏：上黑下浅两段式 -->
+      <aside class="v2-rail">
+        <div class="v2-rail-main">
+          <img class="v2-logo" src="/app-icon.png" alt="账痕" title="账痕 BillTrace" @click="router.push('/overview')">
+          <button class="v2-add" title="记一笔 (Ctrl+N)" @click="openQuickAdd()">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <nav style="display:contents">
+            <button
+              v-for="nav in navs" :key="nav.path"
+              class="v2-nav-item" :class="{ active: activePath === nav.path }"
+              :title="nav.title" @click="router.push(nav.path)"
+              v-html="icon(nav.ic, 20)"
+            />
+          </nav>
         </div>
-        <nav class="zj-nav">
-          <div
-            v-for="nav in navs.filter((n) => n.path !== '/settings')"
-            :key="nav.path"
-            class="zj-nav-item"
-            :class="{ active: activePath === nav.path }"
-            :title="nav.title"
-            @click="router.push(nav.path)"
-          >
-            <el-icon><component :is="nav.icon" /></el-icon>
-            <span class="nav-label">{{ nav.title }}</span>
-          </div>
-        </nav>
-        <div
-          class="zj-sidebar-footer"
-          :class="{ active: activePath === '/settings' }"
-          title="设置"
-          @click="router.push('/settings')"
-        >
-          <el-icon><component :is="Setting" /></el-icon>
-          <span class="footer-label">设置</span>
-        </div>
-        <div class="zj-sidebar-footer" title="切换深浅色" @click="footerToggle">
-          <el-icon><component :is="isDark ? Sunny : Moon" /></el-icon>
-          <span class="footer-label">{{ footerText }}</span>
+        <div class="v2-rail-gap" />
+        <div class="v2-rail-foot">
+          <button class="v2-rail-btn" :title="themeMode === 'system' ? '切换深浅主题（跟随系统中）' : '切换深浅主题'" @click="onThemeToggle" v-html="themeIcon()" />
+          <button class="v2-rail-btn" title="设置" @click="router.push('/settings')" v-html="icon('gear', 19)" />
+          <button class="v2-rail-btn exit" title="退出" @click="appWin.close()" v-html="icon('exit', 19)" />
         </div>
       </aside>
+
       <main class="zj-content">
         <div class="zj-content-drag" data-tauri-drag-region @dblclick="appWin.toggleMaximize()" />
         <div class="zj-content-scroll" @wheel="onMainWheel">
           <router-view v-slot="{ Component }">
             <transition name="fade-slide" mode="out-in">
-              <component :is="Component" @refresh-pending="() => {}" />
+              <component :is="Component" />
             </transition>
           </router-view>
         </div>
       </main>
+    </div>
+
+    <!-- v2 全局层：快速记账 / 遮罩 / Toast -->
+    <div class="v2-overlay" :class="{ show: quickVisible }" @click="quickVisible = false" />
+    <div class="v2-panel" :class="{ show: quickVisible }">
+      <QuickAdd v-if="quickVisible" :visible="quickVisible" @close="quickVisible = false" @saved="onQuickSaved" />
+    </div>
+    <div class="v2-toasts">
+      <div v-for="t in toasts" :key="t.id" class="v2-toast">
+        <span>{{ t.msg }}</span>
+        <button v-if="t.action" @click="() => { t.onAction?.(); kill(t.id); }">{{ t.action }}</button>
+      </div>
     </div>
   </div>
 </template>

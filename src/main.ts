@@ -7,6 +7,7 @@ import 'element-plus/theme-chalk/dark/css-vars.css';
 import App from './App.vue';
 import router from './router';
 import './styles/global.css';
+import './styles/v2.css';
 
 // 禁用 WebView 默认右键菜单（打印/刷新等与桌面应用不符）
 document.addEventListener('contextmenu', (e) => e.preventDefault());
