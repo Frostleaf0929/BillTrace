@@ -241,8 +241,11 @@ function onRankClick(e: MouseEvent): void {
               </span>
             </div>
           </div>
-          <div v-if="!dayGroups.length" style="padding:28px;text-align:center;color:var(--v2-ink-3);font-size:13px">
-            {{ loading ? '加载中…' : '没有符合条件的记录' }}
+          <div v-if="!dayGroups.length" style="padding:28px 20px;text-align:center;color:var(--v2-ink-3);font-size:13px">
+            <template v-if="loading">
+              <div v-for="i in 6" :key="i" style="height:14px;border-radius:7px;background:var(--v2-surface-2);margin:14px auto;width:" :style="{ width: (88 - i * 9) + '%' }" />
+            </template>
+            <template v-else>没有符合条件的记录</template>
           </div>
         </div>
         <div style="display:flex;gap:18px;padding:12px 8px 0;color:var(--v2-ink-3);font-size:12.5px" class="num">

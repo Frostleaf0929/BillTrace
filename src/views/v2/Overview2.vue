@@ -288,22 +288,22 @@ defineExpose({ openQuick });
 
     <div class="v2-grid">
       <!-- 4 张统计卡 -->
-      <div class="v2-card stat span3">
+      <div class="v2-card v2-stat-card span3">
         <div class="v2-chip red" v-html="icon('stats', 19)" />
         <div class="v2-stat-num">{{ money(cardExp) }}<span v-if="expPct !== null" class="v2-trend-pill" :class="expPct > 0 ? 'bad' : 'good'">{{ expPct > 0 ? '↑' : '↓' }} {{ Math.abs(expPct) }}%</span></div>
         <div class="v2-stat-label">{{ R_LABEL[ovR] }}支出</div>
       </div>
-      <div class="v2-card stat span3">
+      <div class="v2-card v2-stat-card span3">
         <div class="v2-chip green" v-html="icon('stats', 19)" />
         <div class="v2-stat-num">{{ money(cardInc) }}<span v-if="incPct !== null" class="v2-trend-pill" :class="incPct >= 0 ? 'good' : 'bad'">{{ incPct >= 0 ? '↑' : '↓' }} {{ Math.abs(incPct) }}%</span></div>
         <div class="v2-stat-label">{{ R_LABEL[ovR] }}收入</div>
       </div>
-      <div class="v2-card stat span3">
+      <div class="v2-card v2-stat-card span3">
         <div class="v2-chip" v-html="icon('wallet', 19)" />
         <div class="v2-stat-num">{{ money(cardNet) }}</div>
         <div class="v2-stat-label">{{ R_LABEL[ovR] }}结余</div>
       </div>
-      <div class="v2-card stat span3">
+      <div class="v2-card v2-stat-card span3">
         <div class="v2-chip amber" v-html="icon('overview', 19)" />
         <div class="v2-stat-num">{{ money(totalAssets) }}</div>
         <div class="v2-stat-label">账户总额 · {{ balances.length }} 个账户</div>
@@ -371,15 +371,25 @@ defineExpose({ openQuick });
           <button class="v2-icon-btn" title="添加账户" @click="addAccount" v-html="icon('overview', 16)" />
         </div>
         <div style="max-height:578px;overflow-y:auto">
-        <div v-for="a in sortedBalances.slice(0, 10)" :key="a.name" data-acc=""" style="cursor:grab;touch-action:none;user-select:none" :class="{ dragging: dragName === a.name }" @pointerdown="(e: PointerEvent) => onAccPointerDown(e, a.name)" @pointermove="onAccPointerMove" @pointerup="onAccPointerUp" @pointercancel="onAccPointerUp" @dblclick="setBase(a)" :title="'按住拖动排序 · 双击设置基数'">
-          <div class="v2-dot" style="background:var(--v2-accent-tint);color:var(--v2-accent)" v-html="icon('wallet', 16)" />
+        <div
+          v-for="a in sortedBalances.slice(0, 10)" :key="a.name"
+          class="v2-acc-row" :class="{ dragging: dragName === a.name }"
+          style="cursor:grab;touch-action:none;user-select:none"
+          :data-acc="a.name"
+          @pointerdown="(e: PointerEvent) => onAccPointerDown(e, a.name)"
+          @pointermove="onAccPointerMove"
+          @pointerup="onAccPointerUp"
+          @pointercancel="onAccPointerUp"
+          @dblclick="setBase(a)"
+          :title="'按住拖动排序 · 双击设置基数'"
+        >
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;font-size:13.5px">{{ a.name }}</div>
             <div class="v2-track" style="margin-top:6px"><i :style="{ width: Math.max(2, Math.round((a.balance / Math.max(1, totalAssets)) * 100)) + '%' }" /></div>
           </div>
           <div class="v2-t-amount" style="font-size:13.5px" :style="{ color: a.balance < 0 ? 'var(--v2-expense)' : 'var(--v2-ink)' }">{{ money(a.balance) }}</div>
         </div>
-        <div class="v2-tx-row" style="color:var(--v2-ink-3);justify-content:center;font-size:12.5px" @click="addAccount">＋ 添加账户（双击行可设基数）</div>
+        <div class="v2-acc-row" style="color:var(--v2-ink-3);justify-content:center;font-size:12.5px" @click="addAccount">＋ 添加账户（按住拖动排序 · 双击设基数）</div>
         </div>
       </div>
     </div>

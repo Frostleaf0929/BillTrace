@@ -782,15 +782,11 @@ html.dark .zj-logo .logo-dot {
 /* ---------- 页面切换动画 ---------- */
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition: opacity 0.24s var(--zj-ease), transform 0.28s var(--zj-spring);
+  transition: opacity 0.18s var(--zj-ease);
 }
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(12px);
-}
+.fade-slide-enter-from,
 .fade-slide-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
 }
 
 /* ---------- Element Plus 微调 ---------- */
