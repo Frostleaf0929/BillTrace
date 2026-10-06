@@ -546,8 +546,7 @@ html.dark .v2-paper {
   position: fixed;
   top: 16px;
   right: 16px;
-  bottom: auto;
-  max-height: calc(100vh - 32px);
+  bottom: 16px;
   width: 420px;
   background: var(--v2-surface);
   z-index: 2010;

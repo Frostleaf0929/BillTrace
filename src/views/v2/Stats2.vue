@@ -13,7 +13,7 @@ import {
   type Win, type WinMonth,
 } from '../../v2/paper';
 import { toast } from '../../v2/toast';
-import { exportElementAsPng } from '../../v2/exportImage';
+import { exportStatsAsPng } from '../../v2/exportStats';
 
 const all = ref<ChartPoint[]>([]);
 const months = ref<{ y: number; m: number }[]>([]);
@@ -68,7 +68,7 @@ async function exportPage(): Promise<void> {
     const el = pageRoot.value; if (!el) { toast('页面未就绪，稍后再试'); return; }
     const d = new Date();
     const name = `账痕-统计-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.png`;
-    const path = await exportElementAsPng(el, name);
+    const path = await exportStatsAsPng(el, name);
     toast(`长图已导出：${path}`);
   } catch (e) {
     toast(`导出失败：${e}`);
