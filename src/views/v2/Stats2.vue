@@ -49,10 +49,6 @@ function rangeLabel(i0: number, i1: number): string {
   if (i0 === 0) return `全部 · ${span} 个月`;
   return `${span} 个月`;
 }
-function setRange(i0: number, i1: number): void {
-  statRange.value = [i0, i1];
-  rebuild();
-}
 function exportPage(): void {
   toast('原型演示：正式版将把整页渲染为一张长图 PNG 保存（含全部卡片）');
 }
@@ -77,23 +73,41 @@ async function load(): Promise<void> {
   try {
     const now = new Date();
     const series = await api.statsChart('month', '2000-01-01', `${now.getFullYear()}-12-31`);
-    // 只保留有数据的月份（从首条记录所在月开始）
-    const firstIdx = series.findIndex((p) => p.expense > 0 || p.income > 0);
-    const trimmed = firstIdx >= 0 ? series.slice(firstIdx) : series.slice(-14);
+    // 头部裁掉全零前缀，尾部裁掉未来空月
+    let firstIdx = series.findIndex((p) => p.expense > 0 || p.income > 0);
+    if (firstIdx < 0) firstIdx = Math.max(0, series.length - 14);
+    let endIdx = series.length - 1;
+    while (endIdx > firstIdx && series[endIdx].expense === 0 && series[endIdx].income === 0) endIdx--;
+    const trimmed = series.slice(firstIdx, endIdx + 1);
     all.value = trimmed;
+    // series[0] 对应 2000-01（后端按月聚合从该日期起），用绝对序号推算年月，避免尾部错位
     months.value = trimmed.map((_, k) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (trimmed.length - 1 - k), 1);
-      return { y: d.getFullYear(), m: d.getMonth() + 1 };
+      const abs = firstIdx + k;
+      return { y: 2000 + Math.floor(abs / 12), m: (abs % 12) + 1 };
     });
     const i1 = trimmed.length - 1;
     if (statRange.value[1] > i1 || statRange.value[0] > i1) statRange.value = [Math.max(0, i1 - 11), i1];
-    const [i0, i1r] = statRange.value;
-    const m0 = months.value[i0], m1 = months.value[i1r];
-    if (m0 && m1) {
-      const fa = `${m0.y}-${String(m0.m).padStart(2, '0')}-01`;
-      const fb = `${m1.y}-${String(m1.m).padStart(2, '0')}-31`;
-      txs.value = (await api.queryTransactions({ date_from: fa, date_to: fb, page: 1, page_size: 99999 })).rows;
-    }
+    await reloadTxs();
+    rebuild();
+  } catch (e) {
+    ElMessage.error(String(e));
+  } finally {
+    loading.value = false;
+  }
+}
+
+// 按当前范围重拉交易明细（切范围必须重拉，否则所有卡片仍是旧数据）
+async function reloadTxs(): Promise<void> {
+  const w = win.value;
+  if (!w) { txs.value = []; return; }
+  txs.value = (await api.queryTransactions({ date_from: w.fa, date_to: w.fb, page: 1, page_size: 99999 })).rows;
+}
+
+async function applyRange(i0: number, i1: number): Promise<void> {
+  statRange.value = [i0, i1];
+  loading.value = true;
+  try {
+    await reloadTxs();
     rebuild();
   } catch (e) {
     ElMessage.error(String(e));
@@ -121,7 +135,7 @@ onMounted(() => {
         <div class="v2-range-tabs">
           <button
             v-for="[lbl, r] in TABS" :key="lbl" :class="{ on: statRange[0] === r[0] && statRange[1] === r[1] }"
-            @click="setRange(r[0], r[1])"
+            @click="applyRange(r[0], r[1])"
           >{{ lbl }}</button>
         </div>
         <span v-if="win" class="v2-date-pill num">

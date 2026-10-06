@@ -1,6 +1,5 @@
 // v2 纸面卡构建器（prototype.html 移植；输入真实 Tx 数据，输出 HTML 字符串，由 PaperCard v-html 渲染）
 import type { Tx } from '../types';
-import { fmtAmount } from '../api';
 import {
   prnd, ppol, psect, pblob, pTick, money, monthLabel, pnum, paperHead, paperSrc, esc, P2R,
 } from './parts';
@@ -432,15 +431,15 @@ export function buildRowsCard(win: Win): string {
     + '<div class="p-src" style="text-align:center;letter-spacing:.12em">ONE TICK = ONE TRANSACTION · DOT MARKS EVERY FIFTH</div>';
 }
 
-/* 排行（明细页底部，维度切换） */
-export function buildRankCard(rows: { name: string; value: number }[], label: string): string {
+/* 排行（明细页底部，维度切换；只输出行，卡头由视图渲染） */
+export function buildRankCard(rows: { name: string; value: number }[]): string {
   const max = rows.length ? rows[0].value : 1;
   const total = rows.reduce((s, r) => s + r.value, 0);
   const ladder = [1, 0.78, 0.6, 0.46, 0.35, 0.26, 0.19, 0.14];
   const body = rows.slice(0, 8).map((r, i) =>
     `<div class="v2-rank-row" data-rank="${esc(r.name)}"><span class="rk">${i + 1}</span><span class="rk-name">${esc(r.name)}</span>`
     + `<div class="v2-track"><i style="width:${Math.round((r.value / max) * 100)}%;opacity:${ladder[i] ?? 0.1}"></i></div>`
-    + `<span class="rk-amt">${fmtAmount(r.value)}</span><span class="rk-pct">${total ? Math.round((r.value / total) * 100) : 0}%</span></div>`
+    + `<span class="rk-amt">¥${pTick(r.value)}</span><span class="rk-pct">${total ? Math.round((r.value / total) * 100) : 0}%</span></div>`
   ).join('');
-  return `<div class="v2-card-head"><h3>维度排行 · ${esc(label)}</h3><div class="spacer"></div></div>${body || '<div style="padding:20px;color:var(--v2-ink-3);font-size:13px">暂无数据</div>'}`;
+  return body || '<div style="padding:20px;color:var(--v2-ink-3);font-size:13px">区间内暂无数据</div>';
 }

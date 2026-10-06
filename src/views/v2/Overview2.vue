@@ -1,15 +1,15 @@
 <script setup lang="ts">
 // 概览 v2：数字卡 + 时间序列（导航器）+ 预算锚点卡 + 最近记录 + 账户
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { api } from '../../api';
 import type { AccountBalance, ChartPoint, SummaryStats, Tx } from '../../types';
 import { icon, catColor, catIcon } from '../../v2/icons';
 import TsChart from '../../v2/TsChart.vue';
-import QuickAdd from '../../v2/QuickAdd.vue';
 import TxPanel from '../../v2/TxPanel.vue';
 import { toast } from '../../v2/toast';
+import { openQuickAdd } from '../../v2/ui';
 
 function money(n: number): string {
   return '¥' + n.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
@@ -22,7 +22,6 @@ const recent = ref<Tx[]>([]);
 const trend = ref<ChartPoint[]>([]);
 const trendMonths = ref<{ y: number; m: number }[]>([]);
 const budgets = ref<{ category: string; amount: number; spent: number }[]>([]);
-const quickVisible = ref(false);
 const panelVisible = ref(false);
 const panelTx = ref<Tx | null>(null);
 
@@ -37,16 +36,56 @@ const totalAssets = computed(() => balances.value.reduce((s, a) => s + a.balance
 
 const monthExpense = computed(() => summary.value?.month_expense ?? 0);
 const monthIncome = computed(() => summary.value?.month_income ?? 0);
-const monthNet = computed(() => monthIncome.value - monthExpense.value);
+
+// 时间范围（日/周/月）：卡片数字与环比随之切换
+type R = 'day' | 'week' | 'month';
+const ovR = ref<R>('month');
+const rangeSums = ref({ exp: 0, inc: 0, prevExp: 0, prevInc: 0 });
+const R_LABEL: Record<R, string> = { day: '日', week: '周', month: '月' };
+
+async function loadRangeSums(): Promise<void> {
+  const now = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  const fmt = (d: Date) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  let curFrom: Date, prevFrom: Date, prevTo: Date;
+  if (ovR.value === 'day') {
+    curFrom = new Date(now);
+    prevFrom = new Date(now); prevFrom.setDate(now.getDate() - 1);
+    prevTo = prevFrom;
+  } else if (ovR.value === 'week') {
+    curFrom = new Date(now); curFrom.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    prevFrom = new Date(curFrom); prevFrom.setDate(curFrom.getDate() - 7);
+    prevTo = new Date(curFrom); prevTo.setDate(curFrom.getDate() - 1);
+  } else {
+    curFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+    prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    prevTo = new Date(now.getFullYear(), now.getMonth(), 0);
+  }
+  const q = async (a: Date, b: Date) =>
+    (await api.queryTransactions({ date_from: fmt(a), date_to: fmt(b), page: 1, page_size: 99999 })).rows;
+  const sum = (rows: Tx[], inc: boolean) =>
+    rows.filter((t) => t.tx_type === (inc ? '收入' : '支出')).reduce((s, t) => s + t.amount, 0);
+  try {
+    const cur = await q(curFrom, now);
+    const prev = await q(prevFrom, prevTo);
+    rangeSums.value = {
+      exp: sum(cur, false), inc: sum(cur, true),
+      prevExp: sum(prev, false), prevInc: sum(prev, true),
+    };
+  } catch { /* 保持旧值 */ }
+}
+watch(ovR, loadRangeSums);
+
+const cardExp = computed(() => (ovR.value === 'month' ? monthExpense.value : rangeSums.value.exp));
+const cardInc = computed(() => (ovR.value === 'month' ? monthIncome.value : rangeSums.value.inc));
+const cardNet = computed(() => cardInc.value - cardExp.value);
 const expPct = computed(() => {
-  const s = summary.value;
-  if (!s || !s.prev_month_expense) return null;
-  return Math.round(((s.month_expense - s.prev_month_expense) / s.prev_month_expense) * 100);
+  const prev = ovR.value === 'month' ? summary.value?.prev_month_expense ?? 0 : rangeSums.value.prevExp;
+  return prev > 0 ? Math.round(((cardExp.value - prev) / prev) * 100) : null;
 });
 const incPct = computed(() => {
-  const s = summary.value;
-  if (!s || !s.prev_month_income) return null;
-  return Math.round(((s.month_income - s.prev_month_income) / s.prev_month_income) * 100);
+  const prev = ovR.value === 'month' ? summary.value?.prev_month_income ?? 0 : rangeSums.value.prevInc;
+  return prev > 0 ? Math.round(((cardInc.value - prev) / prev) * 100) : null;
 });
 
 const todayStr = (() => {
@@ -145,13 +184,13 @@ async function addAccount(): Promise<void> {
   }
 }
 
-onMounted(() => { load(); loadTrend(); 
-  const onRefresh = () => { load(); loadTrend(); };
+onMounted(() => { load(); loadTrend(); loadRangeSums();
+  const onRefresh = () => { load(); loadTrend(); loadRangeSums(); };
   window.addEventListener('v2-refresh', onRefresh);
   onUnmounted(() => window.removeEventListener('v2-refresh', onRefresh));
 });
 
-function openQuick(): void { quickVisible.value = true; }
+function openQuick(): void { openQuickAdd(); }
 defineExpose({ openQuick });
 </script>
 
@@ -163,6 +202,11 @@ defineExpose({ openQuick });
         <div class="sub">{{ new Date().getMonth() + 1 }}月{{ new Date().getDate() }}日 · 今天已记 {{ todayCount }} 笔</div>
       </div>
       <div class="v2-head-right">
+        <div class="v2-seg">
+          <button :class="{ on: ovR === 'day' }" @click="ovR = 'day'">日</button>
+          <button :class="{ on: ovR === 'week' }" @click="ovR = 'week'">周</button>
+          <button :class="{ on: ovR === 'month' }" @click="ovR = 'month'">月</button>
+        </div>
         <button class="v2-btn primary" @click="openQuick">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           记一笔
@@ -174,18 +218,18 @@ defineExpose({ openQuick });
       <!-- 4 张统计卡 -->
       <div class="v2-card stat span3">
         <div class="v2-chip red" v-html="icon('stats', 19)" />
-        <div class="v2-stat-num">{{ money(monthExpense) }}<span v-if="expPct !== null" class="v2-trend-pill" :class="expPct > 0 ? 'bad' : 'good'">{{ expPct > 0 ? '↑' : '↓' }} {{ Math.abs(expPct) }}% 较上月</span></div>
-        <div class="v2-stat-label">本月支出</div>
+        <div class="v2-stat-num">{{ money(cardExp) }}<span v-if="expPct !== null" class="v2-trend-pill" :class="expPct > 0 ? 'bad' : 'good'">{{ expPct > 0 ? '↑' : '↓' }} {{ Math.abs(expPct) }}%</span></div>
+        <div class="v2-stat-label">{{ R_LABEL[ovR] }}支出</div>
       </div>
       <div class="v2-card stat span3">
         <div class="v2-chip green" v-html="icon('stats', 19)" />
-        <div class="v2-stat-num">{{ money(monthIncome) }}<span v-if="incPct !== null" class="v2-trend-pill" :class="incPct >= 0 ? 'good' : 'bad'">{{ incPct >= 0 ? '↑' : '↓' }} {{ Math.abs(incPct) }}% 较上月</span></div>
-        <div class="v2-stat-label">本月收入</div>
+        <div class="v2-stat-num">{{ money(cardInc) }}<span v-if="incPct !== null" class="v2-trend-pill" :class="incPct >= 0 ? 'good' : 'bad'">{{ incPct >= 0 ? '↑' : '↓' }} {{ Math.abs(incPct) }}%</span></div>
+        <div class="v2-stat-label">{{ R_LABEL[ovR] }}收入</div>
       </div>
       <div class="v2-card stat span3">
         <div class="v2-chip" v-html="icon('wallet', 19)" />
-        <div class="v2-stat-num">{{ money(monthNet) }}</div>
-        <div class="v2-stat-label">本月结余</div>
+        <div class="v2-stat-num">{{ money(cardNet) }}</div>
+        <div class="v2-stat-label">{{ R_LABEL[ovR] }}结余</div>
       </div>
       <div class="v2-card stat span3">
         <div class="v2-chip amber" v-html="icon('overview', 19)" />
@@ -266,7 +310,6 @@ defineExpose({ openQuick });
       </div>
     </div>
 
-    <QuickAdd :visible="quickVisible" @close="quickVisible = false" @saved="() => { toast('已记一笔'); load(); loadTrend(); }" />
     <TxPanel :tx="panelTx" :visible="panelVisible" @close="panelVisible = false" @saved="() => { toast('已保存修改'); load(); loadTrend(); }" @deleted="() => { toast('已删除'); load(); loadTrend(); }" />
   </div>
 </template>

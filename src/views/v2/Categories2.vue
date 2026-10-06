@@ -111,6 +111,62 @@ async function exportPreset(format: string): Promise<void> {
   }
 }
 
+// 把已启用的规则应用到「先导入的账单」：待确认队列按商家归类，已入库未分类的补分类
+const applying = ref(false);
+async function applyRules(): Promise<void> {
+  if (applying.value) return;
+  applying.value = true;
+  try {
+    const rules = (await api.listRules()).filter((r) => r.enabled);
+    if (!rules.length) { toast('还没有已启用的规则——先导入规则预设'); return; }
+    const matchRule = (m: string, remark: string, kind: string) =>
+      rules.find((r) => r.kind === kind && (m.includes(r.keyword) || remark.includes(r.keyword)));
+    const pending = await api.listPending();
+    const assigns: { merchant: string; l1: string; l2: string | null }[] = [];
+    const skip: string[] = [];
+    const matched = new Map<string, { l1: string; l2: string | null }>();
+    for (const p of pending) {
+      const m = p.tx.merchant || '';
+      if (matched.has(m)) continue;
+      const rule = matchRule(m, p.tx.remark || '', p.tx.tx_type === '收入' ? 'income' : 'expense');
+      if (rule) matched.set(m, { l1: rule.l1, l2: rule.l2 });
+    }
+    for (const p of pending) {
+      const m = p.tx.merchant || '';
+      const hit = matched.get(m);
+      if (hit) { if (!assigns.some((a) => a.merchant === m)) assigns.push({ merchant: m, l1: hit.l1, l2: hit.l2 }); }
+      else if (!skip.includes(m)) skip.push(m);
+    }
+    const [assigned] = await api.resolvePending(assigns, skip);
+    const pendingTxIds = new Set(pending.map((p2) => p2.tx.id));
+    const page = await api.queryTransactions({ page: 1, page_size: 99999 });
+    const batches = new Map<string, number[]>();
+    let unmatched = 0;
+    for (const t of page.rows) {
+      if (t.l1 || pendingTxIds.has(t.id)) continue;
+      const m = t.merchant || '';
+      const rule = matchRule(m, t.remark || '', t.tx_type === '收入' ? 'income' : 'expense');
+      if (!rule) { unmatched++; continue; }
+      const key = rule.l1 + '|' + (rule.l2 || '');
+      const arr = batches.get(key) || [];
+      arr.push(t.id);
+      batches.set(key, arr);
+    }
+    let moved = 0;
+    for (const [key, ids] of batches) {
+      const [l1, l2] = key.split('|');
+      await api.setTransactionsCategory(ids, l1, l2 || null, null);
+      moved += ids.length;
+    }
+    toast(`规则应用完成：待确认归类 ${assigned} 个商家 · 历史账单补分类 ${moved} 笔${skip.length ? ` · ${skip.length} 个商家仍待确认` : ''}${unmatched ? ` · ${unmatched} 笔无匹配规则` : ''}`);
+    await load();
+  } catch (e) {
+    toast(`规则应用失败：${e}`);
+  } finally {
+    applying.value = false;
+  }
+}
+
 onMounted(load);
 onMounted(() => {
   const onRefresh = () => load();
@@ -190,10 +246,13 @@ onMounted(() => {
         </p>
         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
           <button class="v2-btn primary" @click="presetVisible = true">导入预设</button>
+          <button class="v2-btn ghost" :disabled="applying" @click="applyRules">{{ applying ? '应用中…' : '把规则应用到已有账单' }}</button>
           <button class="v2-btn ghost" @click="exportPreset('md')">导出 md</button>
           <button class="v2-btn ghost" @click="exportPreset('txt')">导出 txt</button>
         </div>
         <div style="margin-top:20px;padding:14px;background:var(--v2-surface-2);border-radius:14px;font-size:12.5px;color:var(--v2-ink-2);line-height:1.8">
+          <b style="color:var(--v2-ink)">先导账单后导规则？</b><br>
+          点「把规则应用到已有账单」：待确认队列按规则自动归类，已入库的未分类账单批量补分类——顺序无关。<br><br>
           <b style="color:var(--v2-ink)">拖拽移动</b><br>
           树行拖拽改层级 / 排序已在旧版实现，本页下一批接入。
         </div>

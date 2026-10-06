@@ -6,6 +6,7 @@ import { api, fmtAmount } from '../../api';
 import type { Category, PiePoint, Tx } from '../../types';
 import { icon, catColor, catIcon } from '../../v2/icons';
 import TxPanel from '../../v2/TxPanel.vue';
+import PendingResolveDialog from '../../components/PendingResolveDialog.vue';
 import { toast } from '../../v2/toast';
 import { buildRankCard } from '../../v2/paper';
 
@@ -24,8 +25,9 @@ const loading = ref(false);
 const seg = ref<'all' | 'expense' | 'income'>('all');
 const cat = ref('');
 const acc = ref('');
-const scope = ref<'month' | 'year' | 'all'>('month');
+const scope = ref<'month' | 'year' | 'all'>('all');
 const q = ref('');
+const pendingVisible = ref(false);
 
 // 排行卡（本月口径，从统计页移入）
 const rankType = ref<'支出' | '收入'>('支出');
@@ -96,7 +98,7 @@ async function load(): Promise<void> {
     const from = `${now.getFullYear()}-${p(now.getMonth() + 1)}-01`;
     const to = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())}`;
     rankData.value = await api.statsPie(rankType.value, from, to, rankDim.value);
-    rankHtml.value = buildRankCard(rankData.value, '本月');
+    rankHtml.value = buildRankCard(rankData.value);
   } catch { rankHtml.value = ''; }
   try { pendingCount.value = (await api.listPending()).length; } catch { pendingCount.value = 0; }
 }
@@ -151,19 +153,8 @@ async function batchMove(): Promise<void> {
     ElMessage.error(String(e));
   }
 }
-async function openPending(): Promise<void> {
-  try {
-    const rows2 = await api.listPending();
-    if (!rows2.length) { toast('没有待确认的商家 🎉'); return; }
-    const names = rows2.slice(0, 8).map((r2) => r2.tx.merchant).filter(Boolean).join('、');
-    await ElMessageBox.alert(
-      `有 ${rows2.length} 笔账单的商家待归类：${names}${rows2.length > 8 ? ' 等' : ''}。导入账单后会自动弹出归类向导；也可以重新导入任意账单触发。`,
-      '待确认商家',
-      { confirmButtonText: '知道了' },
-    );
-  } catch (e) {
-    ElMessage.error(String(e));
-  }
+function openPending(): void {
+  pendingVisible.value = true;
 }
 function onRankClick(e: MouseEvent): void {
   const el = (e.target as HTMLElement).closest('[data-rank]') as HTMLElement | null;
@@ -284,6 +275,7 @@ function onRankClick(e: MouseEvent): void {
     </div>
 
     <TxPanel :tx="panelTx" :visible="panelVisible" @close="panelVisible = false" @saved="() => { toast('已保存修改'); load(); }" @deleted="() => { toast('已删除'); load(); }" />
+    <PendingResolveDialog v-model:visible="pendingVisible" @resolved="() => { toast('待确认已处理'); load(); }" />
   </div>
 </template>
 
