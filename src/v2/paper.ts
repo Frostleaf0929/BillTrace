@@ -431,15 +431,16 @@ export function buildRowsCard(win: Win): string {
     + '<div class="p-src" style="text-align:center;letter-spacing:.12em">ONE TICK = ONE TRANSACTION · DOT MARKS EVERY FIFTH</div>';
 }
 
-/* 排行（明细页底部，维度切换；只输出行，卡头由视图渲染） */
+/* 排行（明细页底部，维度切换；只输出行，卡头由视图渲染；上限 15 条超出滚动） */
 export function buildRankCard(rows: { name: string; value: number }[]): string {
   const max = rows.length ? rows[0].value : 1;
   const total = rows.reduce((s, r) => s + r.value, 0);
-  const ladder = [1, 0.78, 0.6, 0.46, 0.35, 0.26, 0.19, 0.14];
-  const body = rows.slice(0, 8).map((r, i) =>
+  const ladder = [1, 0.78, 0.6, 0.46, 0.35, 0.26, 0.19, 0.14, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
+  const body = rows.slice(0, 15).map((r, i) =>
     `<div class="v2-rank-row" data-rank="${esc(r.name)}"><span class="rk">${i + 1}</span><span class="rk-name">${esc(r.name)}</span>`
-    + `<div class="v2-track"><i style="width:${Math.round((r.value / max) * 100)}%;opacity:${ladder[i] ?? 0.1}"></i></div>`
+    + `<div class="v2-track"><i style="width:${Math.round((r.value / max) * 100)}%;opacity:${ladder[i] ?? 0.08}"></i></div>`
     + `<span class="rk-amt">¥${pTick(r.value)}</span><span class="rk-pct">${total ? Math.round((r.value / total) * 100) : 0}%</span></div>`
   ).join('');
-  return body || '<div style="padding:20px;color:var(--v2-ink-3);font-size:13px">区间内暂无数据</div>';
+  if (!body) return '<div style="padding:20px;color:var(--v2-ink-3);font-size:13px">区间内暂无数据</div>';
+  return `<div style="max-height:600px;overflow-y:auto">${body}</div>`;
 }

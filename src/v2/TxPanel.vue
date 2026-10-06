@@ -86,7 +86,9 @@ async function del(): Promise<void> {
 </script>
 
 <template>
-  <div>
+  <!-- 遮罩 + 右侧滑出面板（与 QuickAdd 同一 .v2-panel 体系） -->
+  <div class="v2-overlay" :class="{ show: visible }" @click="emit('close')" />
+  <aside class="v2-panel" :class="{ show: visible }">
     <div style="display:flex;align-items:center;gap:10px">
       <span class="v2-pill" :class="txType === '收入' ? 'greenp' : 'grayp'">{{ txType }}</span>
       <div style="flex:1" />
@@ -132,5 +134,5 @@ async function del(): Promise<void> {
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4.5 7h15M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7M6.5 7l.9 12a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12"/></svg>
       </button>
     </div>
-  </div>
+  </aside>
 </template>

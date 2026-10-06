@@ -32,6 +32,8 @@ const pendingVisible = ref(false);
 // 排行卡（本月口径，从统计页移入）
 const rankType = ref<'支出' | '收入'>('支出');
 const rankDim = ref<'l1' | 'l2' | 'merchant' | 'account'>('l1');
+const rankScope = ref<'month' | 'year' | 'all'>('month');
+const rankLabel = ref('本月');
 const RANK_DIMS = [['l1', '一级分类'], ['l2', '二级分类'], ['merchant', '商家'], ['account', '账户']] as const;
 const rankData = ref<PiePoint[]>([]);
 const rankHtml = ref('');
@@ -95,8 +97,21 @@ async function load(): Promise<void> {
   try {
     const now = new Date();
     const p = (n: number) => String(n).padStart(2, '0');
-    const from = `${now.getFullYear()}-${p(now.getMonth() + 1)}-01`;
-    const to = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())}`;
+    let from: string, to: string, lbl: string;
+    if (rankScope.value === 'month') {
+      from = `${now.getFullYear()}-${p(now.getMonth() + 1)}-01`;
+      to = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())}`;
+      lbl = '本月';
+    } else if (rankScope.value === 'year') {
+      from = `${now.getFullYear()}-01-01`;
+      to = `${now.getFullYear()}-12-31`;
+      lbl = '今年';
+    } else {
+      from = '2000-01-01';
+      to = '2099-12-31';
+      lbl = '全部';
+    }
+    rankLabel.value = lbl;
     rankData.value = await api.statsPie(rankType.value, from, to, rankDim.value);
     rankHtml.value = buildRankCard(rankData.value);
   } catch { rankHtml.value = ''; }
@@ -240,8 +255,13 @@ function onRankClick(e: MouseEvent): void {
       <!-- 维度排行（从统计页移入） -->
       <div class="v2-card span12">
         <div class="v2-card-head">
-          <h3>维度排行 · 本月</h3>
+          <h3>维度排行 · {{ rankLabel }}</h3>
           <div class="spacer" />
+          <div class="v2-seg">
+            <button :class="{ on: rankScope === 'month' }" @click="rankScope = 'month'; load()">本月</button>
+            <button :class="{ on: rankScope === 'year' }" @click="rankScope = 'year'; load()">今年</button>
+            <button :class="{ on: rankScope === 'all' }" @click="rankScope = 'all'; load()">全部</button>
+          </div>
           <div class="v2-seg">
             <button
               v-for="[v, lbl] in RANK_DIMS" :key="v" :class="{ on: rankDim === v }"
@@ -253,7 +273,7 @@ function onRankClick(e: MouseEvent): void {
             <button :class="{ on: rankType === '收入' }" @click="rankType = '收入'; load()">收入</button>
           </div>
         </div>
-        <div style="color:var(--v2-ink-3);font-size:12px;margin:-8px 0 10px">点击行可按一级分类筛选上方流水</div>
+        <div style="color:var(--v2-ink-3);font-size:12px;margin:-8px 0 10px">点击行可按一级分类筛选上方流水 · 最多显示 15 条</div>
         <div v-html="rankHtml" @click="onRankClick" />
       </div>
     </div>

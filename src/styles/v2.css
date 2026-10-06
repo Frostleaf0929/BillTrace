@@ -294,7 +294,7 @@ html.dark .v2-seg button.on { background: var(--v2-surface-2); }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 8px;
+  padding: 11px 30px 11px 8px;
   border-radius: 14px;
   cursor: pointer;
   position: relative;
@@ -335,7 +335,7 @@ html.dark .v2-seg button.on { background: var(--v2-surface-2); }
 .v2-day-head .net { margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums; }
 .v2-row-check {
   position: absolute;
-  right: 12px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   width: 20px;
