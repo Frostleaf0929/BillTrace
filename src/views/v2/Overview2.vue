@@ -35,6 +35,58 @@ const budgetPct = computed(() => (budget.value && budget.value.amount > 0 ? Math
 const budgetLeft = computed(() => (budget.value ? budget.value.amount - budget.value.spent : 0));
 const totalAssets = computed(() => balances.value.reduce((s, a) => s + a.balance, 0));
 
+// 账户拖拽排序（按住拖动实时换位，松手保存；顺序持久化）
+const accountOrder = ref<string[]>([]);
+const sortedBalances = computed(() => {
+  const idx = (n: string) => {
+    const i = accountOrder.value.indexOf(n);
+    return i === -1 ? 9999 : i;
+  };
+  return [...balances.value].sort((a, b) => idx(a.name) - idx(b.name));
+});
+async function persistOrder(): Promise<void> {
+  try { await api.setSetting('accountOrder', JSON.stringify(accountOrder.value)); } catch { /* 忽略 */ }
+}
+const dragName = ref('');
+let dragStartX = 0, dragStartY = 0, dragArmed = false, lastSwapAt = 0;
+function onAccPointerDown(e: PointerEvent, name: string): void {
+  if (e.button !== 0) return;
+  const el = e.currentTarget as HTMLElement;
+  if ((e.target as HTMLElement).closest('button')) return;
+  dragName.value = name;
+  dragStartX = e.clientX; dragStartY = e.clientY;
+  dragArmed = false; lastSwapAt = 0;
+  el.setPointerCapture(e.pointerId);
+}
+function onAccPointerMove(e: PointerEvent): void {
+  if (!dragName.value) return;
+  if (!dragArmed) {
+    if (Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY) < 6) return;
+    dragArmed = true;
+  }
+  const now = Date.now();
+  if (now - lastSwapAt < 130) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-acc]') as HTMLElement | null;
+  const targetName = el?.dataset.acc;
+  if (!targetName || targetName === dragName.value) return;
+  const r = el!.getBoundingClientRect();
+  const inCore =
+    e.clientX > r.left + r.width * 0.25 && e.clientX < r.right - r.width * 0.25 &&
+    e.clientY > r.top + r.height * 0.2 && e.clientY < r.bottom - r.height * 0.2;
+  if (!inCore) return;
+  const list = sortedBalances.value.map((a) => a.name);
+  const from = list.indexOf(dragName.value), to = list.indexOf(targetName);
+  if (from < 0 || to < 0) return;
+  list.splice(to, 0, list.splice(from, 1)[0]);
+  accountOrder.value = list;
+  lastSwapAt = now;
+}
+function onAccPointerUp(): void {
+  if (dragArmed && dragName.value) persistOrder();
+  dragName.value = '';
+  dragArmed = false;
+}
+
 const monthExpense = computed(() => summary.value?.month_expense ?? 0);
 const monthIncome = computed(() => summary.value?.month_income ?? 0);
 
@@ -129,6 +181,10 @@ async function load(): Promise<void> {
       api.accountBalances(),
     ]);
     summary.value = s;
+    try {
+      const raw = await api.getSetting('accountOrder');
+      if (raw) accountOrder.value = JSON.parse(raw);
+    } catch { /* 默认排序 */ }
     budgets.value = bl;
     recent.value = page.rows;
     balances.value = b;
@@ -315,7 +371,7 @@ defineExpose({ openQuick });
           <button class="v2-icon-btn" title="添加账户" @click="addAccount" v-html="icon('overview', 16)" />
         </div>
         <div style="max-height:578px;overflow-y:auto">
-        <div v-for="a in balances.slice(0, 10)" :key="a.name" class="v2-tx-row" style="cursor:pointer" @dblclick="setBase(a)" :title="'双击设置基数'">
+        <div v-for="a in sortedBalances.slice(0, 10)" :key="a.name" data-acc=""" style="cursor:grab;touch-action:none;user-select:none" :class="{ dragging: dragName === a.name }" @pointerdown="(e: PointerEvent) => onAccPointerDown(e, a.name)" @pointermove="onAccPointerMove" @pointerup="onAccPointerUp" @pointercancel="onAccPointerUp" @dblclick="setBase(a)" :title="'按住拖动排序 · 双击设置基数'">
           <div class="v2-dot" style="background:var(--v2-accent-tint);color:var(--v2-accent)" v-html="icon('wallet', 16)" />
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;font-size:13.5px">{{ a.name }}</div>

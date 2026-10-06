@@ -13,6 +13,7 @@ import {
   type Win, type WinMonth,
 } from '../../v2/paper';
 import { toast } from '../../v2/toast';
+import { exportElementAsPng } from '../../v2/exportImage';
 
 const all = ref<ChartPoint[]>([]);
 const months = ref<{ y: number; m: number }[]>([]);
@@ -58,8 +59,21 @@ function isActive(t: { span: number; all?: boolean }): boolean {
   const [i0, i1] = tabWindow(t);
   return statRange.value[0] === i0 && statRange.value[1] === i1;
 }
-function exportPage(): void {
-  toast('原型演示：正式版将把整页渲染为一张长图 PNG 保存（含全部卡片）');
+const exporting = ref(false);
+async function exportPage(): Promise<void> {
+  if (exporting.value) return;
+  exporting.value = true;
+  try {
+    const el = document.querySelector('#page-stats > div') as HTMLElement;
+    const d = new Date();
+    const name = `账痕-统计-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.png`;
+    const path = await exportElementAsPng(el, name);
+    toast(`长图已导出：${path}`);
+  } catch (e) {
+    toast(`导出失败：${e}`);
+  } finally {
+    exporting.value = false;
+  }
 }
 
 function rebuild(): void {
@@ -167,7 +181,7 @@ onMounted(() => {
         <span v-if="win" class="v2-date-pill num">
           <span v-html="icon('cal', 13)" />{{ win.fa }} – {{ win.fb }}
         </span>
-        <button class="v2-btn primary" style="height:40px" @click="exportPage">
+        <button class="v2-btn primary" style="height:40px" :disabled="exporting" @click="exportPage">
           <span v-html="icon('dl', 15)" />导出本页长图
         </button>
       </div>

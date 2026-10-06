@@ -110,13 +110,13 @@ const body = computed(() => {
 const maxAll = computed(() => Math.max(...all.value.map((m) => m.expense), 1));
 const navSvg = computed(() => {
   const NW = 1000, NH = 46;
-  let p = `M0,${NH}`, ln = `M0,${NH}`;
-  all.value.forEach((m, i) => {
-    const x = (NW * i) / Math.max(1, all.value.length - 1);
-    const y = NH - 3 - ((NH - 8) * m.expense) / maxAll.value;
-    p += ` L${x.toFixed(1)},${y.toFixed(1)}`;
-    ln += ` L${x.toFixed(1)},${y.toFixed(1)}`;
-  });
+  const pts: [number, number][] = all.value.map((m, i) => [
+    (NW * i) / Math.max(1, all.value.length - 1),
+    NH - 3 - ((NH - 8) * m.expense) / maxAll.value,
+  ]);
+  const ln = smooth(pts);
+  let p = `M0,${NH}`;
+  if (pts.length) p += ` ${smooth(pts)}`;
   p += ` L${NW},${NH} Z`;
   return `<path d="${p}" fill="var(--zj-primary)" opacity=".26"/><path d="${ln}" fill="none" stroke="var(--zj-primary)" stroke-width="1.2" opacity=".85"/>`;
 });

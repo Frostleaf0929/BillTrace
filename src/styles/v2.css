@@ -667,3 +667,17 @@ html[data-panel='dock'] .v2-panel { top: 0; bottom: 0; max-height: none; height:
 .v2-anim text { animation: v2soft calc(var(--v2-dur) * 4) ease both; }
 html.no-motion .v2-anim .line, html.no-motion .v2-anim .ppop, html.no-motion .v2-anim .dotin, html.no-motion .v2-anim text { animation: none; }
 html.no-motion .v2-anim .line { stroke-dasharray: none; stroke-dashoffset: 0; }
+
+/* ============ 拖拽 ============ */
+.v2-tx-row.dragging {
+  cursor: grabbing;
+  transform: scale(1.02);
+  background: var(--v2-surface);
+  border: 1px solid var(--v2-accent);
+  box-shadow: 0 12px 30px rgba(26, 31, 51, 0.18);
+  z-index: 2;
+}
+.v2-tree-row[draggable='true'] { cursor: grab; }
+.v2-tree-row.drag-over-before { box-shadow: inset 0 2px 0 var(--v2-accent); }
+.v2-tree-row.drag-over-after { box-shadow: inset 0 -2px 0 var(--v2-accent); }
+.v2-tree-row.drag-over-inner { background: var(--v2-accent-tint); border: 1px dashed var(--v2-accent); }

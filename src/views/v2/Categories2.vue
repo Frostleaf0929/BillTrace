@@ -21,17 +21,18 @@ interface Node {
   cat: Category;
   children: Node[];
   count: number;
+  depth: number;
 }
 
 const tree = computed<Node[]>(() => {
   const list = all.value.filter((c) => c.kind === kind.value);
   const roots = list.filter((c) => c.parent_id === null);
-  const build = (cat: Category): Node => {
-    const children = list.filter((c) => c.parent_id === cat.id).map(build);
+  const build = (cat: Category, depth: number): Node => {
+    const children = list.filter((c) => c.parent_id === cat.id).map((c) => build(c, depth + 1));
     const count = (sums.value[cat.name] || 0) + children.reduce((s, ch) => s + ch.count, 0);
-    return { cat, children, count };
+    return { cat, children, count, depth };
   };
-  return roots.map(build);
+  return roots.map((r) => build(r, 0));
 });
 
 function toggle(id: number): void {
@@ -168,6 +169,60 @@ async function applyRules(): Promise<void> {
 }
 
 onMounted(load);
+
+// ---------- 拖拽移动（HTML5 DnD：上/内/下 三段判定） ----------
+const dragId = ref<number | null>(null);
+const dragOver = ref<{ id: number; pos: 'before' | 'after' | 'inner' } | null>(null);
+function findNode(id: number): Node | null {
+  const walk = (list: Node[]): Node | null => {
+    for (const n of list) {
+      if (n.cat.id === id) return n;
+      const hit = walk(n.children);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  return walk(tree.value);
+}
+function descendants(node: Node): number[] {
+  const out: number[] = [];
+  const walk = (n: Node): void => { out.push(n.cat.id); n.children.forEach(walk); };
+  walk(node);
+  return out;
+}
+function onDragStart(e: DragEvent, node: Node): void {
+  dragId.value = node.cat.id;
+  e.dataTransfer?.setData('text/plain', String(node.cat.id));
+}
+function onDragOver(e: DragEvent, node: Node): void {
+  if (dragId.value == null) return;
+  const dragged = findNode(dragId.value);
+  if (!dragged || descendants(dragged).includes(node.cat.id)) { dragOver.value = null; return; }
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const rel = (e.clientY - r.top) / r.height;
+  const canInner = node.depth < 2 && node.cat.id !== dragged.cat.id;
+  let pos: 'before' | 'after' | 'inner' = rel < 0.35 ? 'before' : rel > 0.65 ? 'after' : 'inner';
+  if (pos === 'inner' && !canInner) pos = rel < 0.5 ? 'before' : 'after';
+  dragOver.value = { id: node.cat.id, pos };
+  e.preventDefault();
+}
+function onDrop(e: DragEvent, node: Node): void {
+  e.preventDefault();
+  const over = dragOver.value;
+  dragOver.value = null;
+  const id = dragId.value;
+  dragId.value = null;
+  if (!over || id == null) return;
+  const dragged = findNode(id);
+  if (!dragged || dragged.cat.id === node.cat.id) return;
+  let parentId: number | null;
+  let sort: number;
+  if (over.pos === 'inner') { parentId = node.cat.id; sort = node.children.length; }
+  else { parentId = node.cat.parent_id; sort = node.cat.sort + (over.pos === 'after' ? 1 : -1); }
+  api.moveCategory(id, parentId, Math.max(0, sort))
+    .then(() => { toast('已移动'); load(); })
+    .catch((e2) => toast(`移动失败：${e2}`));
+}
 onMounted(() => {
   const onRefresh = () => load();
   window.addEventListener('v2-refresh', onRefresh);
@@ -193,7 +248,7 @@ onMounted(() => {
     <div class="v2-grid">
       <div class="v2-card span8">
         <div v-for="node in tree" :key="node.cat.id">
-          <div class="v2-tree-row" @click="toggle(node.cat.id)">
+          <div class="v2-tree-row" :class="{ 'drag-over-before': dragOver?.id === node.cat.id && dragOver?.pos === 'before', 'drag-over-inner': dragOver?.id === node.cat.id && dragOver?.pos === 'inner', 'drag-over-after': dragOver?.id === node.cat.id && dragOver?.pos === 'after' }" draggable="true" @dragstart="onDragStart($event, node)" @dragover="onDragOver($event, node)" @drop="onDrop($event, node)" @dragend="dragOver = null; dragId = null" @click="toggle(node.cat.id)">
             <span class="tw" :class="{ open: openIds.has(node.cat.id) && node.children.length }" v-html="icon('chevR', 14)" />
             <div class="v2-dot" style="width:32px;height:32px;border-radius:10px;background-color:transparent" :style="{ color: catColor(node.cat.name) }" v-html="catIcon(node.cat.name, 17)" />
             <span class="t-name">{{ node.cat.name }}</span>
@@ -207,7 +262,7 @@ onMounted(() => {
           </div>
           <template v-if="openIds.has(node.cat.id)">
             <div v-for="ch in node.children" :key="ch.cat.id">
-              <div class="v2-tree-row" style="padding-left:46px" @click="toggle(ch.cat.id)">
+              <div class="v2-tree-row" style="padding-left:46px" :class="{ 'drag-over-before': dragOver?.id === ch.cat.id && dragOver?.pos === 'before', 'drag-over-inner': dragOver?.id === ch.cat.id && dragOver?.pos === 'inner', 'drag-over-after': dragOver?.id === ch.cat.id && dragOver?.pos === 'after' }" draggable="true" @dragstart="onDragStart($event, ch)" @dragover="onDragOver($event, ch)" @drop="onDrop($event, ch)" @dragend="dragOver = null; dragId = null" @click="toggle(ch.cat.id)">
                 <span class="tw" :class="{ open: openIds.has(ch.cat.id) && ch.children.length }" v-html="icon('chevR', 14)" />
                 <span style="width:6px;height:6px;border-radius:99px" :style="{ background: catColor(node.cat.name) }" />
                 <span class="t-name" style="font-weight:500">{{ ch.cat.name }}</span>
@@ -220,7 +275,7 @@ onMounted(() => {
                 </div>
               </div>
               <div v-for="gch in ch.children" :key="gch.cat.id">
-                <div class="v2-tree-row" style="padding-left:82px">
+                <div class="v2-tree-row" style="padding-left:82px" :class="{ 'drag-over-before': dragOver?.id === gch.cat.id && dragOver?.pos === 'before', 'drag-over-after': dragOver?.id === gch.cat.id && dragOver?.pos === 'after' }" draggable="true" @dragstart="onDragStart($event, gch)" @dragover="onDragOver($event, gch)" @drop="onDrop($event, gch)" @dragend="dragOver = null; dragId = null">
                   <span style="width:5px;height:5px;border-radius:99px;background:var(--v2-ink-3);opacity:.5" />
                   <span class="t-name" style="font-weight:500;font-size:13px">{{ gch.cat.name }}</span>
                   <span class="v2-lvl-tag">小级</span>
