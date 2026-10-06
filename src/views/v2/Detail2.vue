@@ -278,21 +278,23 @@ function onRankClick(e: MouseEvent): void {
       </div>
     </div>
 
-    <!-- 批操作条 -->
-    <div class="v2-batch-bar" :class="{ show: checked.size > 0 }">
-      <b class="num">已选 {{ checked.size }} 项</b>
-      <select v-model="moveL1" class="v2-select" style="height:34px">
-        <option value="">移动到…</option>
-        <option v-for="o in l1Options" :key="o" :value="o">{{ o }}</option>
-      </select>
-      <select v-if="moveL1 && l2Options.length" v-model="moveL2" class="v2-select" style="height:34px">
-        <option value="">二级（可选）</option>
-        <option v-for="o in l2Options" :key="o" :value="o">{{ o }}</option>
-      </select>
-      <button class="bb-btn" :disabled="!moveL1" @click="batchMove">移动</button>
-      <button class="bb-btn danger" @click="batchDelete">删除</button>
-      <button class="bb-btn" @click="checked = new Set()">取消</button>
-    </div>
+    <!-- 批操作条（仅有勾选时渲染，避免转场闪现） -->
+    <Transition name="pop">
+      <div v-if="checked.size > 0" class="v2-batch-bar show">
+        <b class="num">已选 {{ checked.size }} 项</b>
+        <select v-model="moveL1" class="v2-select" style="height:34px">
+          <option value="">移动到…</option>
+          <option v-for="o in l1Options" :key="o" :value="o">{{ o }}</option>
+        </select>
+        <select v-if="moveL1 && l2Options.length" v-model="moveL2" class="v2-select" style="height:34px">
+          <option value="">二级（可选）</option>
+          <option v-for="o in l2Options" :key="o" :value="o">{{ o }}</option>
+        </select>
+        <button class="bb-btn" :disabled="!moveL1" @click="batchMove">移动</button>
+        <button class="bb-btn danger" @click="batchDelete">删除</button>
+        <button class="bb-btn" @click="checked = new Set()">取消</button>
+      </div>
+    </Transition>
 
     <TxPanel :tx="panelTx" :visible="panelVisible" @close="panelVisible = false" @saved="() => { toast('已保存修改'); load(); }" @deleted="() => { toast('已删除'); load(); }" />
     <PendingResolveDialog v-model:visible="pendingVisible" @resolved="() => { toast('待确认已处理'); load(); }" />

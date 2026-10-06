@@ -48,7 +48,7 @@ export function money(n: number): string {
 
 export function monthLabel(y: number, m: number): string {
   const now = new Date();
-  return (y < now.getFullYear() ? `'${String(y).slice(2)}/` : '') + m + '月';
+  return y < now.getFullYear() ? `${y}.${m}` : `${m}月`;
 }
 
 // 标签防重叠：按 y 排序后强制最小间距

@@ -90,18 +90,16 @@ async function del(): Promise<void> {
   <div class="v2-overlay" :class="{ show: visible }" @click="emit('close')" />
   <aside class="v2-panel" :class="{ show: visible }">
     <div style="display:flex;align-items:center;gap:10px">
-      <span class="v2-pill" :class="txType === '收入' ? 'greenp' : 'grayp'">{{ txType }}</span>
-      <div style="flex:1" />
-      <button class="v2-icon-btn" title="关闭" @click="emit('close')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+      <h2 style="font-size:19px;margin:0">编辑记录</h2>
     </div>
-    <div class="dp-amount num" style="font-size:34px;font-weight:700;margin:8px 0 2px" :style="{ color: txType === '收入' ? 'var(--v2-income)' : 'var(--v2-ink)' }">
-      {{ txType === '收入' ? '+' : '-' }}{{ amount }}
-    </div>
-    <div style="color:var(--v2-ink-3);font-size:12.5px;margin-bottom:14px">{{ txDate }} · {{ account }}</div>
+    <div class="panel-sub">{{ txDate }} · {{ account }}</div>
     <div class="v2-field-label">金额</div>
     <input v-model="amount" class="v2-text-input num" type="text" inputmode="decimal">
+    <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px">
+      <span class="num" style="font-size:22px;font-weight:700" :style="{ color: txType === '收入' ? 'var(--v2-income)' : 'var(--v2-ink)' }">
+        {{ txType === '收入' ? '+' : '-' }}{{ amount || '0' }}
+      </span>
+    </div>
     <div class="v2-field-label">商家</div>
     <input v-model="merchant" class="v2-text-input">
     <div class="v2-field-label">类型</div>
@@ -130,7 +128,8 @@ async function del(): Promise<void> {
     <div style="flex:1" />
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="v2-btn primary" style="flex:1;justify-content:center" :disabled="saving" @click="save">保存</button>
-      <button class="v2-btn danger" @click="del">
+      <button class="v2-btn ghost" style="padding:0 14px" title="关闭" @click="emit('close')">✕</button>
+      <button class="v2-btn danger" style="padding:0 14px" title="删除" @click="del">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4.5 7h15M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7M6.5 7l.9 12a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12"/></svg>
       </button>
     </div>

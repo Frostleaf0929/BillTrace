@@ -21,8 +21,8 @@ const loading = ref(false);
 const statRange = ref<[number, number]>([2, 13]);
 const cards = ref({ ledger: '', heat: '', donut: '', fall: '', income: '', almanac: '', patch: '', rows: '' });
 
-const TABS: [string, [number, number]][] = [
-  ['近1月', [13, 13]], ['3月', [11, 13]], ['6月', [8, 13]], ['1年', [2, 13]], ['全部', [0, 13]],
+const TABS: { lbl: string; span: number; all?: boolean }[] = [
+  { lbl: '近1月', span: 1 }, { lbl: '3月', span: 3 }, { lbl: '6月', span: 6 }, { lbl: '1年', span: 12 }, { lbl: '全部', span: 0, all: true },
 ];
 
 const win = computed<Win | null>(() => {
@@ -41,14 +41,22 @@ const win = computed<Win | null>(() => {
   return { label: rangeLabel(i0, i1), months: winM, txs: txs.value, days, fa, fb };
 });
 
-function rangeLabel(i0: number, i1: number): string {
+function rangeLabel(i0: number, i1: number, isAll = false): string {
   const span = i1 - i0 + 1;
   if (span === 1) return '本月';
-  if (i0 === 2 && i1 === 13) return '近1年';
-  if (i0 === 11) return '近3月';
-  if (i0 === 8) return '近6月';
-  if (i0 === 0) return `全部 · ${span} 个月`;
-  return `${span} 个月`;
+  if (isAll) return `全部 · ${span} 个月`;
+  return `近 ${span} 个月`;
+}
+// 页签按序列实际长度动态钳位（序列不足 12 个月时"1年"自动等于"全部"）
+function tabWindow(t: { span: number; all?: boolean }): [number, number] {
+  const len = all.value.length;
+  const i1 = len - 1;
+  const i0 = t.all ? 0 : Math.max(0, i1 - (t.span - 1));
+  return [i0, i1];
+}
+function isActive(t: { span: number; all?: boolean }): boolean {
+  const [i0, i1] = tabWindow(t);
+  return statRange.value[0] === i0 && statRange.value[1] === i1;
 }
 function exportPage(): void {
   toast('原型演示：正式版将把整页渲染为一张长图 PNG 保存（含全部卡片）');
@@ -120,7 +128,8 @@ async function reloadTxs(): Promise<void> {
   txs.value = (await api.queryTransactions({ date_from: w.fa, date_to: w.fb, page: 1, page_size: 99999 })).rows;
 }
 
-async function applyRange(i0: number, i1: number): Promise<void> {
+async function applyRange(t: { lbl: string; span: number; all?: boolean }): Promise<void> {
+  const [i0, i1] = tabWindow(t);
   statRange.value = [i0, i1];
   loading.value = true;
   try {
@@ -151,9 +160,9 @@ onMounted(() => {
       <div class="v2-head-right">
         <div class="v2-range-tabs">
           <button
-            v-for="[lbl, r] in TABS" :key="lbl" :class="{ on: statRange[0] === r[0] && statRange[1] === r[1] }"
-            @click="applyRange(r[0], r[1])"
-          >{{ lbl }}</button>
+            v-for="t in TABS" :key="t.lbl" :class="{ on: isActive(t) }"
+            @click="applyRange(t)"
+          >{{ t.lbl }}</button>
         </div>
         <span v-if="win" class="v2-date-pill num">
           <span v-html="icon('cal', 13)" />{{ win.fa }} – {{ win.fb }}

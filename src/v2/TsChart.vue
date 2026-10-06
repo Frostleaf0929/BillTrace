@@ -55,18 +55,23 @@ async function draw(): Promise<void> {
 watch([range, all], draw, { immediate: true });
 
 const n = computed(() => data.value.length);
-const maxV = computed(() => Math.max(...data.value.map((d) => Math.max(d.expense, d.income)), 1) * 1.15);
+const maxV = computed(() => {
+  const hi = Math.max(...data.value.map((d) => Math.max(d.expense, d.income)), 1);
+  const netMin = Math.min(...data.value.map((d) => d.income - d.expense), 0);
+  return hi * 1.12 - netMin; // y 域下探到最小结余（负值完整显示）
+});
+const minV = computed(() => Math.min(...data.value.map((d) => d.income - d.expense), 0));
 const plotW = computed(() => W.value - PAD_L - PAD_R);
 const plotH = H - PAD_T - PAD_B;
 function xAt(i: number): number { return PAD_L + (n.value === 1 ? plotW.value / 2 : (plotW.value * i) / (n.value - 1)); }
-function yAt(v: number): number { return PAD_T + plotH * (1 - v / maxV.value); }
+function yAt(v: number): number { return PAD_T + plotH * (1 - (v - minV.value) / Math.max(1e-9, maxV.value - minV.value)); }
 function yTick(v: number): string { return v >= 1000 ? `${Math.round(v / 100) / 10}k` : String(Math.round(v)); }
 const grid = computed(() => {
   let s = '';
   for (let k = 0; k <= 3; k++) {
-    const v = (maxV.value * k) / 3, y = yAt(v);
-    s += `<line x1="${PAD_L}" y1="${y}" x2="${W.value - PAD_R}" y2="${y}" stroke="var(--zj-border)" stroke-width=".75"/>`
-      + `<text x="${PAD_L - 8}" y="${y + 4}" font-size="10.5" fill="var(--v2-ink-3)" text-anchor="end">${yTick(v)}</text>`;
+    const v = minV.value + ((maxV.value - minV.value) * k) / 3, y = yAt(v);
+    s += `<line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${W.value - PAD_R}" y2="${y.toFixed(1)}" stroke="var(--zj-border)" stroke-width=".75"/>`
+      + `<text x="${PAD_L - 8}" y="${(y + 4).toFixed(1)}" font-size="10.5" fill="var(--v2-ink-3)" text-anchor="end">${yTick(v)}</text>`;
   }
   const step = Math.ceil(n.value / 12);
   data.value.forEach((d, i) => {
@@ -94,7 +99,7 @@ const body = computed(() => {
   let s = `<path d="${smoothOf('expense')} L${xAt(n.value - 1).toFixed(1)},${PAD_T + plotH} L${xAt(0).toFixed(1)},${PAD_T + plotH} Z" fill="var(--zj-primary)" opacity=".07"/>`;
   s += `<path class="line" d="${smoothOf('expense')}" fill="none" stroke="var(--zj-expense)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
   s += `<path class="line" d="${smoothOf('income')}" fill="none" stroke="var(--zj-income)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-  s += `<path class="dotin" d="${data.value.map((d, i) => `${i ? 'L' : 'M'}${xAt(i)},${yAt(d.income - d.expense)}`).join(' ')}" fill="none" stroke="var(--v2-ink-3)" stroke-width="1.4" stroke-dasharray="4 4"/>`;
+  s += `<path class="dotin" d="${smooth(data.value.map((d, i) => [xAt(i), yAt(d.income - d.expense)] as [number, number]))}" fill="none" stroke="var(--v2-ink-3)" stroke-width="1.4" stroke-dasharray="4 4"/>`;
   data.value.forEach((d, i) => {
     s += `<circle cx="${xAt(i)}" cy="${yAt(d.expense)}" r="2.8" fill="var(--zj-expense)"/><circle cx="${xAt(i)}" cy="${yAt(d.income)}" r="2.4" fill="var(--zj-income)"/>`;
   });

@@ -332,7 +332,6 @@ html.dark .v2-seg button.on { background: var(--v2-surface-2); }
   background: var(--v2-surface);
   z-index: 2;
   border-bottom: 1px solid var(--v2-line);
-  box-shadow: 0 10px 12px -10px rgba(26, 31, 51, 0.3);
 }
 .v2-day-head .net { margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums; }
 .v2-row-check {
@@ -545,7 +544,8 @@ html.dark .v2-paper {
   position: fixed;
   top: 16px;
   right: 16px;
-  bottom: 16px;
+  bottom: auto;
+  max-height: calc(100vh - 32px);
   width: 420px;
   background: var(--v2-surface);
   z-index: 2010;
@@ -559,9 +559,18 @@ html.dark .v2-paper {
   padding: 24px;
   overflow-y: auto;
 }
-html[data-panel='dock'] .v2-panel { top: 0; bottom: 0; border-radius: 24px 0 0 0; transform: translateX(105%); }
+html[data-panel='dock'] .v2-panel { top: 0; bottom: 0; max-height: none; height: 100%; border-radius: 24px 0 0 0; transform: translateX(105%); }
 .v2-panel.show { transform: none; }
+.v2-panel select.v2-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888da0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
 .v2-panel h2 { font-size: 19px; margin: 0 0 2px; }
+.v2-panel .v2-seg { align-self: flex-start; }
 .v2-panel .panel-sub { color: var(--v2-ink-3); font-size: 12.5px; margin-bottom: 18px; }
 .v2-amount-input {
   width: 100%;

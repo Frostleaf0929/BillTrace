@@ -39,10 +39,10 @@ const monthExpense = computed(() => summary.value?.month_expense ?? 0);
 const monthIncome = computed(() => summary.value?.month_income ?? 0);
 
 // 时间范围（日/周/月）：卡片数字与环比随之切换
-type R = 'day' | 'week' | 'month';
+type R = 'day' | 'week' | 'month' | 'year' | 'all';
 const ovR = ref<R>('month');
 const rangeSums = ref({ exp: 0, inc: 0, prevExp: 0, prevInc: 0 });
-const R_LABEL: Record<R, string> = { day: '日', week: '周', month: '月' };
+const R_LABEL: Record<R, string> = { day: '日', week: '周', month: '月', year: '年', all: '总' };
 
 async function loadRangeSums(): Promise<void> {
   const now = new Date();
@@ -57,10 +57,14 @@ async function loadRangeSums(): Promise<void> {
     curFrom = new Date(now); curFrom.setDate(now.getDate() - ((now.getDay() + 6) % 7));
     prevFrom = new Date(curFrom); prevFrom.setDate(curFrom.getDate() - 7);
     prevTo = new Date(curFrom); prevTo.setDate(curFrom.getDate() - 1);
+  } else if (ovR.value === 'year') {
+    curFrom = new Date(now.getFullYear(), 0, 1);
+    prevFrom = new Date(now.getFullYear() - 1, 0, 1);
+    prevTo = new Date(now.getFullYear() - 1, 11, 31);
   } else {
-    curFrom = new Date(now.getFullYear(), now.getMonth(), 1);
-    prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    prevTo = new Date(now.getFullYear(), now.getMonth(), 0);
+    curFrom = new Date(2000, 0, 1);
+    prevFrom = new Date(2000, 0, 1);
+    prevTo = new Date(2000, 0, 1);
   }
   const q = async (a: Date, b: Date) =>
     (await api.queryTransactions({ date_from: fmt(a), date_to: fmt(b), page: 1, page_size: 99999 })).rows;
@@ -68,7 +72,7 @@ async function loadRangeSums(): Promise<void> {
     rows.filter((t) => t.tx_type === (inc ? '收入' : '支出')).reduce((s, t) => s + t.amount, 0);
   try {
     const cur = await q(curFrom, now);
-    const prev = await q(prevFrom, prevTo);
+    const prev = ovR.value === 'all' ? [] : await q(prevFrom, prevTo);
     rangeSums.value = {
       exp: sum(cur, false), inc: sum(cur, true),
       prevExp: sum(prev, false), prevInc: sum(prev, true),
@@ -216,6 +220,8 @@ defineExpose({ openQuick });
           <button :class="{ on: ovR === 'day' }" @click="ovR = 'day'">日</button>
           <button :class="{ on: ovR === 'week' }" @click="ovR = 'week'">周</button>
           <button :class="{ on: ovR === 'month' }" @click="ovR = 'month'">月</button>
+          <button :class="{ on: ovR === 'year' }" @click="ovR = 'year'">年</button>
+          <button :class="{ on: ovR === 'all' }" @click="ovR = 'all'">总</button>
         </div>
         <button class="v2-btn primary" @click="openQuick">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -308,7 +314,8 @@ defineExpose({ openQuick });
           <div class="spacer" />
           <button class="v2-icon-btn" title="添加账户" @click="addAccount" v-html="icon('overview', 16)" />
         </div>
-        <div v-for="a in balances" :key="a.name" class="v2-tx-row" style="cursor:pointer" @dblclick="setBase(a)" :title="'双击设置基数'">
+        <div style="max-height:578px;overflow-y:auto">
+        <div v-for="a in balances.slice(0, 10)" :key="a.name" class="v2-tx-row" style="cursor:pointer" @dblclick="setBase(a)" :title="'双击设置基数'">
           <div class="v2-dot" style="background:var(--v2-accent-tint);color:var(--v2-accent)" v-html="icon('wallet', 16)" />
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;font-size:13.5px">{{ a.name }}</div>
@@ -317,6 +324,7 @@ defineExpose({ openQuick });
           <div class="v2-t-amount" style="font-size:13.5px" :style="{ color: a.balance < 0 ? 'var(--v2-expense)' : 'var(--v2-ink)' }">{{ money(a.balance) }}</div>
         </div>
         <div class="v2-tx-row" style="color:var(--v2-ink-3);justify-content:center;font-size:12.5px" @click="addAccount">＋ 添加账户（双击行可设基数）</div>
+        </div>
       </div>
     </div>
 
