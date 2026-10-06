@@ -10,7 +10,7 @@ import {
   bgEnabled, bgPath, bgFit, bgStamp,
 } from './theme';
 import { icon } from './v2/icons';
-import { openQuickAdd, quickVisible, loadUiPrefs } from './v2/ui';
+import { openQuickAdd, quickVisible, loadUiPrefs, v2PanelOpen } from './v2/ui';
 import QuickAdd from './v2/QuickAdd.vue';
 import { toasts, kill, toast } from './v2/toast';
 
@@ -119,7 +119,7 @@ onUnmounted(() => {
 <template>
   <div class="zj-root">
     <!-- 悬浮窗口按钮（无标题栏） -->
-    <div class="tb-btns">
+    <div class="tb-btns" v-show="!v2PanelOpen">
       <button class="tb-btn" title="最小化" @click="appWin.minimize()"><el-icon><Minus /></el-icon></button>
       <button class="tb-btn" title="最大化 / 还原" @click="appWin.toggleMaximize()">
         <svg width="11" height="11" viewBox="0 0 11 11"><rect x="0.5" y="0.5" width="10" height="10" fill="none" stroke="currentColor" /></svg>

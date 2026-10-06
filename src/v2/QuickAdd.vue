@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import { api } from '../api';
 import type { Category, AccountBalance } from '../types';
 import { catColor, catIcon } from './icons';
+import { v2PanelOpen } from './ui';
 import { ElMessageBox } from 'element-plus';
 
 const props = defineProps<{ visible: boolean }>();
@@ -46,6 +47,7 @@ async function loadRefs(): Promise<void> {
   } catch { /* 忽略 */ }
 }
 
+watch(() => props.visible, (v) => { v2PanelOpen.value = v; });
 watch(() => props.visible, async (v) => {
   if (!v) return;
   await loadRefs();

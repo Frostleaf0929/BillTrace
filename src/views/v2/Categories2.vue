@@ -353,22 +353,18 @@ onMounted(() => {
           树行拖拽改层级 / 排序已支持（拖到目标行的上 / 中 / 下分别表示排前面 / 变子级 / 排后面）。
         </div>
       </div>
-      <div class="v2-card span4">
+      <div class="v2-card span12">
         <div class="v2-card-head">
           <h3>已学习规则 · {{ rulesList.length }}</h3>
           <div class="spacer" />
+          <span style="color:var(--v2-ink-3);font-size:12px">导入与待确认归类时自动沉淀 · 关用后不再自动分类 · 最多显示 30 条</span>
         </div>
-        <div style="color:var(--v2-ink-3);font-size:12px;margin:-8px 0 10px">导入与待确认归类时自动沉淀 · 关用后不再自动分类 · 最多显示 30 条</div>
-        <div style="max-height:330px;overflow-y:auto">
-          <div v-for="r in rulesList.slice(0, 30)" :key="r.id" class="v2-bud-row">
-            <div class="bud-main">
-              <div class="v2-bud-top">
-                <span class="v2-bud-name">{{ r.keyword }}</span>
-                <span class="v2-pill" :class="r.source === 'learned' ? 'warnp' : 'grayp'">{{ r.source === 'learned' ? '学习' : '预设' }}</span>
-                <span class="v2-bud-nums">{{ r.l1 }}{{ r.l2 ? ' · ' + r.l2 : '' }}</span>
-              </div>
-              <div style="font-size:11px;color:var(--v2-ink-3)">{{ r.kind === 'income' ? '收入' : '支出' }}规则 · 优先级 {{ r.priority }}</div>
-            </div>
+        <div style="max-height:320px;overflow-y:auto">
+          <div v-for="r in rulesList.slice(0, 30)" :key="r.id" class="v2-rank-row" style="cursor:default">
+            <span class="rk-name" style="width:auto;max-width:220px">{{ r.keyword }}</span>
+            <span class="v2-pill" :class="r.source === 'learned' ? 'warnp' : 'grayp'">{{ r.source === 'learned' ? '学习' : '预设' }}</span>
+            <span style="color:var(--v2-ink-2);font-size:12.5px">{{ r.l1 }}{{ r.l2 ? ' · ' + r.l2 : '' }}</span>
+            <span style="margin-left:auto;font-size:11px;color:var(--v2-ink-3)">{{ r.kind === 'income' ? '收入' : '支出' }} · 优先级 {{ r.priority }}</span>
             <button class="v2-toggle" :class="{ on: r.enabled }" title="启用 / 停用" @click="toggleRule(r)" />
             <button class="v2-icon-btn" title="编辑" @click="editRule(r)" v-html="icon('edit', 14)" />
             <button class="v2-icon-btn" title="删除" @click="delRule(r)" v-html="icon('trash', 14)" />

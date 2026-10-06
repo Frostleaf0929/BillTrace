@@ -4,6 +4,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { api } from '../api';
 import type { Category, Tx } from '../types';
+import { v2PanelOpen } from './ui';
 
 const props = defineProps<{ tx: Tx | null; visible: boolean }>();
 const emit = defineEmits<{ close: []; saved: []; deleted: [id: number] }>();
@@ -25,6 +26,7 @@ const l1Options = computed(() => [...new Set(cats.value.filter((c) => c.kind !==
 const parentCat = computed(() => cats.value.find((c) => c.parent_id === null && c.name === l1.value));
 const l2Options = computed(() => cats.value.filter((c) => c.parent_id !== null && c.parent_id === parentCat.value?.id).map((c) => c.name));
 
+watch(() => props.visible, (v) => { v2PanelOpen.value = v; });
 watch(() => props.visible, async (v) => {
   if (!v || !props.tx) return;
   const t = props.tx;

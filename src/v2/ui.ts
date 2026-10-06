@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { api } from '../api';
 
 export const quickVisible = ref(false);
+export const v2PanelOpen = ref(false); // 任一右侧面板打开时为真（隐藏窗口按钮用）
 export const panelMode = ref<'float' | 'dock'>('float');
 
 export async function loadUiPrefs(): Promise<void> {
