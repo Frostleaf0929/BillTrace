@@ -6,6 +6,7 @@ import { api, fmtAmount } from '../../api';
 import type { Category, PiePoint, Tx } from '../../types';
 import { icon, catColor, catIcon } from '../../v2/icons';
 import TxPanel from '../../v2/TxPanel.vue';
+import VSelect from '../../v2/VSelect.vue';
 import PendingResolveDialog from '../../components/PendingResolveDialog.vue';
 import { toast } from '../../v2/toast';
 import { buildRankCard } from '../../v2/paper';
@@ -39,6 +40,11 @@ const rankData = ref<PiePoint[]>([]);
 const rankHtml = ref('');
 
 const l1Options = computed(() => [...new Set(cats.value.filter((c) => c.kind === 'expense' && c.parent_id === null).map((c) => c.name))]);
+// 自绘下拉的选项表（首项为"全部/移动到…"占位）
+const catOpts = computed(() => [{ value: '', label: '全部分类' }, ...l1Options.value.map((o) => ({ value: o, label: o }))]);
+const accOpts = computed(() => [{ value: '', label: '全部账户' }, ...accounts.value.map((o) => ({ value: o, label: o }))]);
+const moveL1Opts = computed(() => [{ value: '', label: '移动到…' }, ...l1Options.value.map((o) => ({ value: o, label: o }))]);
+const moveL2Opts = computed(() => [{ value: '', label: '二级（可选）' }, ...l2Options.value.map((o) => ({ value: o, label: o }))]);
 const l2Options = computed(() => {
   const parent = cats.value.find((c) => c.parent_id === null && c.name === moveL1.value);
   if (!parent) return [];
@@ -223,14 +229,8 @@ function onRankClick(e: MouseEvent): void {
             <button :class="{ on: seg === 'expense' }" @click="seg = 'expense'; load()">支出</button>
             <button :class="{ on: seg === 'income' }" @click="seg = 'income'; load()">收入</button>
           </div>
-          <select v-model="cat" class="v2-select" @change="load()">
-            <option value="">全部分类</option>
-            <option v-for="o in l1Options" :key="o" :value="o">{{ o }}</option>
-          </select>
-          <select v-model="acc" class="v2-select" @change="load()">
-            <option value="">全部账户</option>
-            <option v-for="o in accounts" :key="o" :value="o">{{ o }}</option>
-          </select>
+          <VSelect v-model="cat" :options="catOpts" @change="load()" />
+          <VSelect v-model="acc" :options="accOpts" @change="load()" />
           <div class="v2-seg" style="margin-left:auto">
             <button :class="{ on: scope === 'month' }" @click="scope = 'month'; load()">本月</button>
             <button :class="{ on: scope === 'year' }" @click="scope = 'year'; load()">今年</button>
@@ -302,15 +302,9 @@ function onRankClick(e: MouseEvent): void {
     <Transition name="pop">
       <div v-if="checked.size > 0" class="v2-batch-bar show">
         <b class="num">已选 {{ checked.size }} 项</b>
-        <select v-model="moveL1" class="v2-select" style="height:34px">
-          <option value="">移动到…</option>
-          <option v-for="o in l1Options" :key="o" :value="o">{{ o }}</option>
-        </select>
+        <VSelect v-model="moveL1" :options="moveL1Opts" />
         <button class="bb-btn" title="新建一级分类" @click="newL1">＋新建</button>
-        <select v-if="moveL1 && l2Options.length" v-model="moveL2" class="v2-select" style="height:34px">
-          <option value="">二级（可选）</option>
-          <option v-for="o in l2Options" :key="o" :value="o">{{ o }}</option>
-        </select>
+        <VSelect v-if="moveL1 && l2Options.length" v-model="moveL2" :options="moveL2Opts" />
         <button class="bb-btn" :disabled="!moveL1" @click="batchMove">移动</button>
         <button class="bb-btn danger" @click="batchDelete">删除</button>
         <button class="bb-btn" @click="checked = new Set()">取消</button>

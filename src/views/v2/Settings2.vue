@@ -10,6 +10,7 @@ import {
   tabletMode, setTabletMode, designStyle, setDesignStyle, DesignStyle,
 } from '../../theme';
 import { icon } from '../../v2/icons';
+import VSelect from '../../v2/VSelect.vue';
 import ImportBillDialog from '../../components/ImportBillDialog.vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { toast } from '../../v2/toast';
@@ -23,6 +24,13 @@ const importVisible = ref(false);
 const THEME_OPTS: ['light' | 'dark' | 'system', string][] = [['light', '浅色'], ['dark', '深色'], ['system', '跟随系统']];
 
 const STYLE_OPTS: [DesignStyle, string][] = [['default', '现行'], ['apple', '苹果'], ['m3', 'M3'], ['hoos', '鸿蒙']];
+
+const BG_FIT_OPTS = [
+  { value: 'cover', label: '铺满' },
+  { value: 'contain', label: '包含' },
+  { value: 'fill', label: '拉伸' },
+  { value: 'tile', label: '平铺' },
+];
 
 onMounted(async () => {
   try {
@@ -180,13 +188,8 @@ async function doClear(scope: 'tx' | 'all'): Promise<void> {
             <div class="set-label">背景图</div>
             <div class="set-desc">{{ bgEnabled && bgPath ? '已启用' : '未启用' }}</div>
           </div>
-          <div style="margin-left:auto;display:flex;gap:8px">
-            <select :value="bgFit" class="v2-select" @change="setBgFit(($event.target as HTMLSelectElement).value as any)">
-              <option value="cover">铺满</option>
-              <option value="contain">包含</option>
-              <option value="fill">拉伸</option>
-              <option value="tile">平铺</option>
-            </select>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <VSelect :model-value="bgFit" :options="BG_FIT_OPTS" @change="(v: string) => setBgFit(v as 'cover' | 'contain' | 'fill' | 'tile')" />
             <button class="v2-btn ghost" style="height:34px" @click="pickBg">选择图片</button>
             <button v-if="bgEnabled" class="v2-btn ghost" style="height:34px" @click="clearBg">清除</button>
           </div>

@@ -557,9 +557,8 @@ html.dark .v2-paper {
   right: 16px;
   bottom: 16px;
   width: 420px;
-  background: color-mix(in srgb, var(--zj-card-solid) calc(var(--zj-glass-alpha) * 1%), transparent);
-  backdrop-filter: var(--zj-glass-blur);
-  -webkit-backdrop-filter: var(--zj-glass-blur);
+  /* 实底与卡片同色（面板浮在遮罩上，玻璃会显得灰暗、和卡片不一致——用户反馈） */
+  background: var(--zj-card-solid);
   z-index: 2510;
   border-radius: 20px;
   border: 1px solid var(--v2-line);
@@ -718,13 +717,14 @@ html.no-motion .v2-anim .line { stroke-dasharray: none; stroke-dashoffset: 0; }
   z-index: 2;
 }
 
-/* 面板内字段高度统一（与类型/分类控件一致），日期日历图标内移留出右边空间 */
+/* 面板内字段高度统一 40px（用户反馈"每条稍微小点"，内容超高由面板自身 overflow-y 滚动） */
 .v2-panel .v2-text-input,
 .v2-panel .v2-select,
+.v2-panel .v2-vselect-trigger,
 .v2-panel input[type='date'] {
   box-sizing: border-box;
   width: 100%;
-  height: 44px;
+  height: 40px;
   padding-right: 16px;
 }
 .v2-panel .v2-select { padding-right: 34px; }
@@ -787,7 +787,7 @@ html.classic-ui .v2-rail {
   transition: width 200ms cubic-bezier(0.22, 0.61, 0.36, 1), background 0.3s var(--zj-ease);
   overflow: hidden;
 }
-html.classic-ui .v2-rail.collapsed { width: 64px; }
+html.classic-ui .v2-rail.collapsed { width: 68px; } /* 与平板模式细条同宽（用户反馈：形态切换不再跳宽度） */
 /* 收展动画期间：侧栏暂不做玻璃（重排帧省掉 backdrop 重算，见 ui.ts 的 rail-anim） */
 html.rail-anim .v2-rail { backdrop-filter: none; -webkit-backdrop-filter: none; }
 html.classic-ui .v2-rail-main {
@@ -1022,3 +1022,67 @@ html.dark[data-style='hoos'] {
 html.dark[data-style='hoos'] .v2-card { border-color: transparent; border-radius: 16px; }
 /* 鸿蒙风页面主标题更紧凑（大标题贴近内容） */
 html[data-style='hoos'] .v2-pagehead h1 { font-size: 24px; letter-spacing: 0; }
+
+/* ============ VSelect 自绘下拉（替代原生 select，组件见 v2/VSelect.vue） ============ */
+.v2-vselect { display: inline-flex; min-width: 0; }
+.v2-vselect.block { display: flex; width: 100%; }
+.v2-vselect-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--v2-line);
+  background: var(--v2-surface-2);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--v2-ink);
+  cursor: pointer;
+  min-width: 0;
+  transition: border-color var(--v2-dur), background var(--v2-dur);
+}
+.v2-vselect-trigger:hover { border-color: color-mix(in srgb, var(--v2-ink) 16%, transparent); }
+.v2-vselect-trigger.open { border-color: var(--v2-accent); }
+.v2-vselect.block .v2-vselect-trigger { width: 100%; height: 40px; }
+.vs-label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.vs-label.ph { color: var(--v2-ink-2); }
+.vs-chev { flex: none; color: var(--v2-ink-3); transition: transform 160ms var(--zj-ease); }
+/* 箭头指示弹层方向：向下展开时朝上，向上展开时朝下（用户反馈"永远向下"） */
+.v2-vselect-trigger.open:not(.up) .vs-chev { transform: rotate(180deg); }
+.v2-vselect-trigger:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+.v2-vselect-pop {
+  position: fixed;
+  z-index: 2800;
+  background: var(--zj-card-solid);
+  border: 1px solid var(--v2-line);
+  border-radius: 12px;
+  box-shadow: var(--zj-shadow-hover);
+  padding: 5px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: v2popin 140ms var(--zj-ease);
+}
+@keyframes v2popin { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.vs-opt {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 0;
+  background: none;
+  color: var(--v2-ink-2);
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: none;
+}
+.vs-opt.act { background: var(--v2-surface-2); color: var(--v2-ink); }
+.vs-opt.on { background: var(--v2-accent-tint); color: var(--v2-accent-deep); font-weight: 600; }

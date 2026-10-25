@@ -5,6 +5,8 @@ import { api } from '../api';
 import type { Category, AccountBalance } from '../types';
 import { catColor, catIcon } from './icons';
 import { v2PanelOpen } from './ui';
+import { toast } from './toast';
+import VSelect from './VSelect.vue';
 import { ElMessageBox } from 'element-plus';
 
 const props = defineProps<{ visible: boolean }>();
@@ -26,13 +28,20 @@ const accounts = ref<AccountBalance[]>([]);
 
 const catChips = computed(() => {
   const cats = type.value === 'expense' ? expCats.value : incCats.value;
-  const l1s = [...new Set(cats.map((c) => c.name))];
+  const l1s = [...new Set(cats.filter((c) => c.parent_id === null).map((c) => c.name))];
   return l1s.slice(0, 9);
 });
+// 二级分类按 parent_id 过滤（按名称相等过滤 + 列表只装了一级分类 = 二级永远为空的老坑）
 const l2Options = computed(() => {
   const cats = type.value === 'expense' ? expCats.value : incCats.value;
-  return cats.filter((c) => c.parent_id !== null && c.name === l1.value).map((c) => c.name);
+  const parent = cats.find((c) => c.parent_id === null && c.name === l1.value);
+  if (!parent) return [];
+  return cats.filter((c) => c.parent_id === parent.id).map((c) => c.name);
 });
+// VSelect 选项表
+const l2SelOpts = computed(() => [{ value: '', label: '不选' }, ...l2Options.value.map((o) => ({ value: o, label: o }))]);
+const accountOpts = computed(() => accounts.value.map((a) => ({ value: a.name, label: a.name })));
+const transferInOpts = computed(() => accounts.value.filter((a) => a.name !== account.value).map((a) => ({ value: a.name, label: a.name })));
 
 async function loadRefs(): Promise<void> {
   try {
@@ -41,8 +50,8 @@ async function loadRefs(): Promise<void> {
       api.listCategories('income'),
       api.accountBalances(),
     ]);
-    expCats.value = e.filter((c) => c.parent_id === null);
-    incCats.value = i.filter((c) => c.parent_id === null);
+    expCats.value = e; // 全量（一级 + 二级），一级/二级在使用处各自过滤
+    incCats.value = i;
     accounts.value = b;
   } catch { /* 忽略 */ }
 }
@@ -75,6 +84,10 @@ async function addL1(): Promise<void> {
 async function save(keep: boolean): Promise<void> {
   const amt = Math.abs(parseFloat(amount.value) || 0);
   if (!amt) return;
+  if (type.value === 'transfer') {
+    if (!account.value || !accountTo.value) { toast('转账需要选择转出与转入账户'); return; }
+    if (account.value === accountTo.value) { toast('转出与转入不能是同一个账户'); return; }
+  }
   if (saving.value) return;
   saving.value = true;
   try {
@@ -141,25 +154,18 @@ function onKey(e: KeyboardEvent): void {
         <span style="flex:1" />
         <button class="v2-link-btn" style="font-size:12px" @click="addL1">＋新建一级</button>
       </div>
-      <select v-model="l2" class="v2-select" style="width:100%">
-        <option value="">不选</option>
-        <option v-for="o in l2Options" :key="o" :value="o">{{ o }}</option>
-      </select>
+      <VSelect v-if="l2Options.length" v-model="l2" :options="l2SelOpts" block />
     </template>
     <template v-else>
       <div class="v2-field-label">从哪个账户转出</div>
-      <div class="v2-chip-grid">
-        <button v-for="a in accounts" :key="a.name" class="v2-cat-chip" :class="{ on: account === a.name }" @click="account = a.name">{{ a.name }}</button>
-      </div>
+      <VSelect v-model="account" :options="accountOpts" block placeholder="选择转出账户" />
       <div class="v2-field-label">转入哪个账户</div>
-      <div class="v2-chip-grid">
-        <button v-for="a in accounts.filter((x) => x.name !== account)" :key="a.name" class="v2-cat-chip" :class="{ on: accountTo === a.name }" @click="accountTo = a.name">{{ a.name }}</button>
-      </div>
+      <VSelect v-model="accountTo" :options="transferInOpts" block placeholder="选择转入账户" />
     </template>
-    <div class="v2-field-label">{{ type === 'transfer' ? '转出账户' : '账户' }}</div>
-    <div class="v2-chip-grid">
-      <button v-for="a in accounts" :key="a.name" class="v2-cat-chip" :class="{ on: account === a.name }" @click="account = a.name">{{ a.name }}</button>
-    </div>
+    <template v-if="type !== 'transfer'">
+      <div class="v2-field-label">账户（{{ type === 'income' ? '转入' : '转出' }}）</div>
+      <VSelect v-model="account" :options="accountOpts" block />
+    </template>
     <div class="v2-field-label">日期与备注</div>
     <div style="display:flex;gap:10px">
       <input v-model="date" class="v2-text-input" type="date" style="flex:none;width:170px">

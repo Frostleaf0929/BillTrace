@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { api } from '../api';
 import type { Category, Tx } from '../types';
 import { v2PanelOpen } from './ui';
+import VSelect from './VSelect.vue';
 
 const props = defineProps<{ tx: Tx | null; visible: boolean }>();
 const emit = defineEmits<{ close: []; saved: []; deleted: [id: number] }>();
@@ -14,7 +15,9 @@ const merchant = ref('');
 const txType = ref('支出');
 const l1 = ref('');
 const l2 = ref('');
-const account = ref('');
+const account = ref('');     // 支出=转出账户 / 收入=转入账户
+const accountFrom = ref(''); // 转账-转出
+const accountTo = ref('');   // 转账-转入
 const txDate = ref('');
 const remark = ref('');
 const cats = ref<Category[]>([]);
@@ -25,6 +28,12 @@ const editAmt = ref(false);
 const l1Options = computed(() => [...new Set(cats.value.filter((c) => c.kind !== 'account' && c.parent_id === null).map((c) => c.name))]);
 const parentCat = computed(() => cats.value.find((c) => c.parent_id === null && c.name === l1.value));
 const l2Options = computed(() => cats.value.filter((c) => c.parent_id !== null && c.parent_id === parentCat.value?.id).map((c) => c.name));
+// VSelect 选项表
+const l1Opts = computed(() => [{ value: '', label: '未分类' }, ...l1Options.value.map((o) => ({ value: o, label: o }))]);
+const l2Opts = computed(() => [{ value: '', label: '二级（可选）' }, ...l2Options.value.map((o) => ({ value: o, label: o }))]);
+const accountOpts = computed(() => accounts.value.map((o) => ({ value: o, label: o })));
+const transferInOpts = computed(() => accounts.value.filter((o) => o !== accountFrom.value).map((o) => ({ value: o, label: o })));
+const subAcc = computed(() => (txType.value === '转账' ? `${accountFrom.value || '…'} → ${accountTo.value || '…'}` : account.value));
 
 watch(() => props.visible, (v) => { v2PanelOpen.value = v; });
 watch(() => props.visible, async (v) => {
@@ -36,6 +45,8 @@ watch(() => props.visible, async (v) => {
   l1.value = t.l1 || '';
   l2.value = t.l2 || '';
   account.value = t.account_out || t.account_in || '';
+  accountFrom.value = t.account_out || '';
+  accountTo.value = t.account_in || '';
   txDate.value = t.tx_time.slice(0, 10);
   remark.value = t.remark || '';
   await refreshCats();
@@ -81,6 +92,15 @@ async function refreshCats(): Promise<void> {
 
 async function save(): Promise<void> {
   if (!props.tx || saving.value) return;
+  const isT = txType.value === '转账';
+  if (isT && (!accountFrom.value || !accountTo.value)) {
+    ElMessage.warning('转账需要选择转出与转入账户');
+    return;
+  }
+  if (isT && accountFrom.value === accountTo.value) {
+    ElMessage.warning('转出与转入不能是同一个账户');
+    return;
+  }
   saving.value = true;
   try {
     const amt = Math.abs(parseFloat(amount.value) || props.tx.amount);
@@ -88,10 +108,10 @@ async function save(): Promise<void> {
       ...props.tx,
       tx_type: txType.value,
       tx_time: `${txDate.value} 12:00:00`,
-      l1: txType.value === '转账' ? null : l1.value || null,
-      l2: txType.value === '转账' ? null : l2.value || null,
-      account_out: txType.value === '收入' ? null : account.value || null,
-      account_in: txType.value === '支出' ? null : account.value || null,
+      l1: isT ? null : l1.value || null,
+      l2: isT ? null : l2.value || null,
+      account_out: isT ? (accountFrom.value || null) : txType.value === '收入' ? null : (account.value || null),
+      account_in: isT ? (accountTo.value || null) : txType.value === '支出' ? null : (account.value || null),
       amount: amt,
       merchant: merchant.value,
       remark: remark.value || null,
@@ -129,7 +149,7 @@ async function del(): Promise<void> {
     <div style="display:flex;align-items:center;gap:10px">
       <h2 style="font-size:19px;margin:0">编辑记录</h2>
     </div>
-    <div class="panel-sub">{{ txDate }} · {{ account }}</div>
+    <div class="panel-sub">{{ txDate }} · {{ subAcc }}</div>
     <div class="v2-field-label">金额（双击数字可改）</div>
     <div style="display:flex;align-items:baseline;gap:10px;margin:4px 0 2px">
       <input
@@ -158,19 +178,19 @@ async function del(): Promise<void> {
       <button class="v2-link-btn" style="font-size:12px;margin-left:8px" @click="addCat(2)">＋二级</button>
     </div>
     <div v-if="txType !== '转账'" style="display:flex;gap:8px">
-      <select v-model="l1" class="v2-select" style="flex:1">
-        <option value="">未分类</option>
-        <option v-for="o in l1Options" :key="o" :value="o">{{ o }}</option>
-      </select>
-      <select v-model="l2" class="v2-select" style="flex:1">
-        <option value="">二级（可选）</option>
-        <option v-for="o in l2Options" :key="o" :value="o">{{ o }}</option>
-      </select>
+      <VSelect v-model="l1" :options="l1Opts" block style="flex:1" @change="l2 = ''" />
+      <VSelect v-model="l2" :options="l2Opts" block style="flex:1" />
     </div>
-    <div class="v2-field-label">账户</div>
-    <select v-model="account" class="v2-select" style="width:100%">
-      <option v-for="o in accounts" :key="o" :value="o">{{ o }}</option>
-    </select>
+    <template v-if="txType !== '转账'">
+      <div class="v2-field-label">账户（{{ txType === '收入' ? '转入' : '转出' }}）</div>
+      <VSelect v-model="account" :options="accountOpts" block />
+    </template>
+    <template v-else>
+      <div class="v2-field-label">转出账户</div>
+      <VSelect v-model="accountFrom" :options="accountOpts" block />
+      <div class="v2-field-label">转入账户</div>
+      <VSelect v-model="accountTo" :options="transferInOpts" block />
+    </template>
     <div class="v2-field-label">日期</div>
     <input v-model="txDate" class="v2-text-input num" type="date">
     <div class="v2-field-label">备注</div>

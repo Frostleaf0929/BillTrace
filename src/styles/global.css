@@ -944,3 +944,9 @@ html.dark .el-table { --el-table-header-text-color: var(--zj-text-sub); }
 ::-webkit-scrollbar-thumb { background: rgba(128, 134, 154, 0.35); border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(128, 134, 154, 0.6); }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- Element Plus 弹层与 v2 规范对齐（用户反馈：弹出来的选择框风格不统一/无滚动上限） ---------- */
+.el-select-dropdown { border-radius: 12px; overflow: hidden; }
+.el-select-dropdown__wrap { max-height: 308px; }
+.el-message-box { border-radius: 16px; }
+.el-popper.is-light { border: 1px solid var(--zj-border); }
