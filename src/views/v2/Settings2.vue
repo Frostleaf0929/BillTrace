@@ -7,7 +7,7 @@ import {
   ACCENTS, accentId, customAccent, glassOn, blurPx, glassAlpha, brightness,
   setAccent, setCustomAccent, setGlass, setBlur, setGlassAlpha, setBrightness,
   themeMode, setThemeMode, bgEnabled, bgPath, bgFit, setBgEnabled, setBgFit, refreshBackground,
-  tabletMode, setTabletMode,
+  tabletMode, setTabletMode, designStyle, setDesignStyle, DesignStyle,
 } from '../../theme';
 import { icon } from '../../v2/icons';
 import ImportBillDialog from '../../components/ImportBillDialog.vue';
@@ -21,6 +21,8 @@ const wheelNav = ref(true);
 const importVisible = ref(false);
 
 const THEME_OPTS: ['light' | 'dark' | 'system', string][] = [['light', '浅色'], ['dark', '深色'], ['system', '跟随系统']];
+
+const STYLE_OPTS: [DesignStyle, string][] = [['default', '现行'], ['apple', '苹果'], ['m3', 'M3'], ['hoos', '鸿蒙']];
 
 onMounted(async () => {
   try {
@@ -125,6 +127,15 @@ async function doClear(scope: 'tx' | 'all'): Promise<void> {
             <div class="set-desc">细侧栏 + 黑色点缀卡片；关闭为经典侧栏（点品牌行可展开/收起）</div>
           </div>
           <button class="v2-toggle" :class="{ on: tabletMode }" style="margin-left:auto" @click="setTabletMode(!tabletMode)" />
+        </div>
+        <div class="v2-set-row">
+          <div>
+            <div class="set-label">设计风格</div>
+            <div class="set-desc">按不同设计规范做的主题方向：苹果 = 材质玻璃 / M3 = 色调表面 / 鸿蒙 = 纯净卡片</div>
+          </div>
+          <div class="v2-seg" style="margin-left:auto">
+            <button v-for="[s, lbl] in STYLE_OPTS" :key="s" :class="{ on: designStyle === s }" @click="setDesignStyle(s)">{{ lbl }}</button>
+          </div>
         </div>
         <div class="v2-set-row">
           <div>

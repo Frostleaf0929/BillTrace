@@ -52,6 +52,24 @@ export async function setTabletMode(on: boolean) {
   try { await api.setSetting('tabletMode', String(on)); } catch { /* 忽略 */ }
 }
 
+// ---------- 设计风格预设（现行 / 苹果 HIG / Material 3 / 鸿蒙） ----------
+// 只做 token 层覆盖（html[data-style] → v2.css），不改组件结构：换风格即时生效、随时可回
+export type DesignStyle = 'default' | 'apple' | 'm3' | 'hoos';
+export const DESIGN_STYLES: DesignStyle[] = ['default', 'apple', 'm3', 'hoos'];
+export const designStyle = ref<DesignStyle>('default');
+
+function applyDesignStyle() {
+  const root = document.documentElement;
+  if (designStyle.value === 'default') delete root.dataset.style;
+  else root.dataset.style = designStyle.value;
+}
+
+export async function setDesignStyle(s: DesignStyle) {
+  designStyle.value = s;
+  applyDesignStyle();
+  try { await api.setSetting('designStyle', s); } catch { /* 忽略 */ }
+}
+
 function currentAccentColor(): string {
   if (customAccent.value) return customAccent.value;
   const acc = ACCENTS.find((a) => a.id === accentId.value) ?? ACCENTS[0];
@@ -89,6 +107,7 @@ function applyAll() {
   applyAccent();
   applyGlass();
   applyTablet();
+  applyDesignStyle();
 }
 
 async function loadAll() {
@@ -123,6 +142,8 @@ async function loadAll() {
     if (f === 'cover' || f === 'contain' || f === 'fill' || f === 'tile') bgFit.value = f;
     // 平板模式：v0.4.0 的 UI v2 形态；未设置过（老用户）默认经典侧栏（纯浅/深）
     tabletMode.value = (await api.getSetting('tabletMode')) === 'true';
+    const ds = await api.getSetting('designStyle');
+    if (ds && DESIGN_STYLES.includes(ds as DesignStyle)) designStyle.value = ds as DesignStyle;
   } catch { /* 用默认值 */ }
   applyAll();
 }

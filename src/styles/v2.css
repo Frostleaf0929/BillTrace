@@ -879,3 +879,103 @@ html.classic-ui .v2-rail.collapsed .v2-rail-btn {
   justify-content: center;
   padding: 0;
 }
+
+/* ============================================================
+   设计风格预设（html[data-style]）—— 三种规范方向的 token 覆盖层
+   只动 token 与卡片观感，不改结构：与 平板/经典、浅/深 全部正交组合
+   ============================================================ */
+
+/* ---------- 苹果 HIG：材质分层 + 发丝线 + 克制动效 ----------
+   要点（HIG Materials / Dark Mode）：内容浮在可振动的材质上（半透明+高斯模糊+饱和度补偿）；
+   分隔用发丝线不用重描边；深色靠提亮表面分层而非纯灰；动效收敛（无弹跳） */
+html[data-style='apple'] {
+  --zj-bg: #f5f5f7;
+  --v2-line: rgba(0, 0, 0, 0.08);
+  --v2-surface-2: rgba(120, 120, 128, 0.1);
+  --v2-shadow: 0 1px 1px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.07);
+  --v2-hover-lift: 1px;
+  --v2-hover-scale: 1.004;
+  --v2-dur: 220ms;
+}
+/* 注意：预设不覆盖 .v2-anchor-card 的底色——平板模式的黑色锚点卡是刻意点缀，白字不能落白底 */
+html[data-style='apple']:not(.no-glass) .v2-card:not(.v2-anchor-card) {
+  background: color-mix(in srgb, var(--zj-card-solid) calc(var(--zj-glass-alpha) * 0.86%), transparent);
+  backdrop-filter: var(--zj-glass-blur);
+  -webkit-backdrop-filter: var(--zj-glass-blur);
+  border-color: rgba(0, 0, 0, 0.07);
+  border-radius: 18px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05), 0 8px 22px rgba(0, 0, 0, 0.08);
+}
+html.dark[data-style='apple'] {
+  --zj-bg: #0b0b0c;
+  --v2-line: rgba(255, 255, 255, 0.1);
+  --v2-surface-2: rgba(120, 120, 128, 0.24);
+  --v2-shadow: none;
+}
+html.dark[data-style='apple']:not(.no-glass) .v2-card:not(.v2-anchor-card) {
+  background: color-mix(in srgb, var(--zj-card-solid) calc(var(--zj-glass-alpha) * 0.9%), transparent);
+  backdrop-filter: var(--zj-glass-blur);
+  -webkit-backdrop-filter: var(--zj-glass-blur);
+  border-color: rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  box-shadow: none;
+}
+/* 苹果风滚动条：更细更含蓄 */
+html[data-style='apple'] ::-webkit-scrollbar { width: 6px; height: 6px; }
+
+/* ---------- Material 3：色调表面 + 无描边 + 超大圆角 ----------
+   要点（M3 Color roles / Shape）：表面层级靠"色调度"不靠描边和阴影；
+   中性色从主色衍生（tonal palette）；形状分级 extra-large 28px；激活态用容器色 */
+html[data-style='m3'] {
+  --zj-bg: color-mix(in srgb, var(--zj-primary) 3%, #fcfbff);
+  --v2-line: color-mix(in srgb, var(--zj-primary) 13%, transparent);
+  --v2-surface-2: color-mix(in srgb, var(--zj-primary) 12%, var(--zj-card-solid));
+  --v2-shadow: none;
+  --v2-hover-lift: 0px;
+  --v2-hover-scale: 1;
+}
+html[data-style='m3'] .v2-card:not(.v2-anchor-card) {
+  background: color-mix(in srgb, var(--zj-primary) 8%, var(--zj-card-solid));
+  border-color: transparent;
+  border-radius: 26px;
+  box-shadow: none;
+}
+html[data-style='m3'] .v2-card:hover { box-shadow: 0 2px 10px color-mix(in srgb, var(--zj-primary) 10%, transparent); }
+html.dark[data-style='m3'] {
+  --zj-bg: color-mix(in srgb, var(--zj-primary) 5%, #0e0e12);
+  --v2-surface-2: color-mix(in srgb, var(--zj-primary) 12%, #171718);
+  --v2-shadow: none;
+}
+html.dark[data-style='m3'] .v2-card:not(.v2-anchor-card) {
+  background: color-mix(in srgb, var(--zj-primary) 10%, var(--zj-card-solid));
+  border-color: transparent;
+  border-radius: 26px;
+}
+/* M3 悬浮面板也用容器色 */
+html[data-style='m3'] .v2-panel { border-color: transparent; border-radius: 28px; }
+
+/* ---------- 鸿蒙：纯净白卡 + 柔和投影 + 网格感 ----------
+   要点（HarmonyOS Design 视觉）：大面积纯净表面、卡片化栅格、
+   阴影柔而确定（多层次短投影）、圆角适中 16px、留白克制 */
+html[data-style='hoos'] {
+  --zj-bg: #f1f3f6;
+  --v2-line: rgba(0, 0, 0, 0.06);
+  --v2-surface-2: #edf0f4;
+  --v2-shadow: 0 1px 3px rgba(31, 41, 55, 0.05), 0 4px 16px rgba(31, 41, 55, 0.08);
+  --v2-hover-lift: 2px;
+  --v2-hover-scale: 1.006;
+}
+html[data-style='hoos'] .v2-card {
+  border-color: transparent;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(31, 41, 55, 0.05), 0 4px 16px rgba(31, 41, 55, 0.08);
+}
+html.dark[data-style='hoos'] {
+  --zj-bg: #0f1114;
+  --v2-line: rgba(255, 255, 255, 0.07);
+  --v2-surface-2: #1c1f24;
+  --v2-shadow: none;
+}
+html.dark[data-style='hoos'] .v2-card { border-color: transparent; border-radius: 16px; }
+/* 鸿蒙风页面主标题更紧凑（大标题贴近内容） */
+html[data-style='hoos'] .v2-pagehead h1 { font-size: 24px; letter-spacing: 0; }
