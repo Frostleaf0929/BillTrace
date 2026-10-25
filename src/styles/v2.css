@@ -10,7 +10,7 @@
   --v2-surface-2: #f0f1f6;
   --v2-ink: var(--zj-text);
   --v2-ink-2: var(--zj-text-sub);
-  --v2-ink-3: color-mix(in srgb, var(--zj-text-sub) 55%, var(--zj-bg));
+  --v2-ink-3: color-mix(in srgb, var(--zj-text-sub) 62%, var(--zj-bg));
   --v2-line: var(--zj-border);
   --v2-accent: var(--zj-primary);
   --v2-accent-soft: color-mix(in srgb, var(--zj-primary) 30%, #fff);
@@ -32,7 +32,7 @@
 }
 html.dark {
   --v2-surface-2: #1f1f23;
-  --v2-ink-3: color-mix(in srgb, var(--zj-text-sub) 55%, #0d0d0d);
+  --v2-ink-3: color-mix(in srgb, var(--zj-text-sub) 62%, #0d0d0d);
   --v2-accent-soft: color-mix(in srgb, var(--zj-primary) 45%, #17171a);
   --v2-accent-deep: color-mix(in srgb, var(--zj-primary) 55%, #fff);
   --v2-accent-tint: color-mix(in srgb, var(--zj-primary) 20%, transparent);
@@ -721,3 +721,161 @@ html.no-motion .v2-anim .line { stroke-dasharray: none; stroke-dashoffset: 0; }
 .v2-panel .v2-seg button { height: 34px; }
 .v2-panel input[type='date'] { padding-right: 30px; }
 .v2-panel input[type='date']::-webkit-calendar-picker-indicator { margin-right: 10px; }
+
+/* ============ 键盘焦点可见性（HIG / Material 通用要求） ============ */
+.v2-add:focus-visible,
+.v2-nav-item:focus-visible,
+.v2-rail-btn:focus-visible,
+.v2-btn:focus-visible,
+.v2-toggle:focus-visible,
+.v2-seg button:focus-visible,
+.v2-select:focus-visible,
+.v2-text-input:focus-visible,
+.v2-swatch:focus-visible,
+.v2-pending-badge:focus-visible {
+  outline: 2px solid var(--v2-accent);
+  outline-offset: 2px;
+}
+
+/* ============ 经典模式（html.classic-ui = 平板模式关） ============
+   侧栏恢复 v0.3.0 式可展开玻璃卡（点品牌行收/展）；
+   浅色下去掉所有黑色块：黑侧栏、黑锚点卡、黑 toast/批操作条全部跟随浅色 token */
+
+/* 浅色下重定义锚点色：黑色点缀全部变浅 */
+html.classic-ui:not(.dark) {
+  --v2-anchor: var(--v2-card-solid);
+  --v2-anchor-ink: var(--v2-ink);
+  --v2-anchor-ink2: var(--v2-ink-2);
+}
+html.classic-ui:not(.dark) .v2-anchor-card { border-color: var(--v2-line); }
+html.classic-ui:not(.dark) .v2-anchor-card .track { background: var(--v2-surface-2); }
+html.classic-ui:not(.dark) .v2-anchor-btn { background: var(--v2-accent-tint); color: var(--v2-accent-deep); }
+html.classic-ui:not(.dark) .v2-toast button { color: var(--v2-accent); }
+html.classic-ui:not(.dark) .v2-batch-bar { border: 1px solid var(--v2-line); }
+html.classic-ui:not(.dark) .v2-batch-bar .bb-btn:hover { background: var(--v2-surface-2); color: var(--v2-ink); }
+html.classic-ui:not(.dark) .v2-batch-bar .bb-btn.danger { color: var(--v2-expense); }
+html.classic-ui:not(.dark) .v2-batch-bar .bb-btn.danger:hover { background: rgba(201, 121, 123, 0.14); color: var(--v2-expense); }
+
+/* 经典侧栏：一整块玻璃卡（同旧版侧栏质感），两段底色清透明 */
+html.classic-ui .v2-rail {
+  width: 212px;
+  gap: 0;
+  padding: 12px 10px;
+  box-sizing: border-box;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--zj-card-solid) calc(var(--zj-glass-alpha) * 0.82%), transparent);
+  backdrop-filter: var(--zj-glass-blur);
+  -webkit-backdrop-filter: var(--zj-glass-blur);
+  border: 1px solid var(--zj-sidebar-border);
+  box-shadow: var(--zj-shadow), var(--zj-inset);
+  transition: width 0.34s var(--zj-spring), background 0.3s var(--zj-ease);
+}
+html.classic-ui .v2-rail.collapsed { width: 68px; }
+html.classic-ui .v2-rail-main {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0 2px;
+  align-items: stretch;
+  gap: 2px;
+}
+html.classic-ui .v2-rail-foot {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 8px 2px 0;
+  border-top: 1px solid var(--v2-line);
+  gap: 2px;
+}
+
+/* 品牌行：平板模式下 display:contents（logo 保持原居中样式），经典模式下成一行可点击 */
+.v2-brand { display: contents; }
+.v2-logo-name { display: none; }
+html.classic-ui .v2-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 46px;
+  padding: 0 6px;
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--v2-dur);
+}
+html.classic-ui .v2-brand:hover { background: var(--v2-surface-2); }
+html.classic-ui .v2-logo { margin: 0; width: 34px; height: 34px; border-radius: 10px; }
+html.classic-ui .v2-logo:hover { transform: none; }
+html.classic-ui .v2-logo-name {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--v2-ink);
+  overflow: hidden;
+  max-width: 120px;
+  transition: max-width 0.34s var(--zj-spring), opacity 0.2s var(--zj-ease);
+}
+html.classic-ui .v2-rail.collapsed .v2-logo-name { max-width: 0; opacity: 0; }
+
+/* 侧栏图标统一包一层（标签在平板模式下隐藏，经典模式展开显示） */
+.v2-nav-ic { display: inline-flex; flex: none; }
+.v2-rail-label { display: none; }
+html.classic-ui .v2-rail-label {
+  display: inline-block;
+  max-width: 130px;
+  opacity: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 13.5px;
+  transition: max-width 0.34s var(--zj-spring), opacity 0.18s var(--zj-ease);
+}
+html.classic-ui .v2-rail.collapsed .v2-rail-label { max-width: 0; opacity: 0; }
+
+/* 记一笔：经典模式为整行强调色按钮，收起时回到 44px 方钮 */
+html.classic-ui .v2-add {
+  width: 100%;
+  margin: 6px 0 10px;
+  justify-content: flex-start;
+  padding: 0 12px;
+  gap: 10px;
+  border-radius: 12px;
+}
+html.classic-ui .v2-rail.collapsed .v2-add {
+  width: 44px;
+  margin: 6px auto 10px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+
+/* 导航项：经典模式整行（图标+文字），激活 = 强调色淡底（Material 3 选中态范式） */
+html.classic-ui .v2-nav-item {
+  width: 100%;
+  margin: 0;
+  justify-content: flex-start;
+  padding: 0 12px;
+  gap: 11px;
+}
+html.classic-ui .v2-nav-item:hover { background: var(--v2-surface-2); color: var(--v2-ink); }
+html.classic-ui .v2-nav-item.active { background: var(--v2-accent-tint); color: var(--v2-accent-deep); }
+html.classic-ui .v2-rail.collapsed .v2-nav-item {
+  width: 44px;
+  margin: 0 auto;
+  justify-content: center;
+  padding: 0;
+}
+
+/* 底部按钮：同导航项整行化 */
+html.classic-ui .v2-rail-btn {
+  width: 100%;
+  margin: 0;
+  justify-content: flex-start;
+  padding: 0 12px;
+  gap: 11px;
+}
+html.classic-ui .v2-rail.collapsed .v2-rail-btn {
+  width: 44px;
+  margin: 0 auto;
+  justify-content: center;
+  padding: 0;
+}

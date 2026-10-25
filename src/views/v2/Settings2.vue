@@ -7,6 +7,7 @@ import {
   ACCENTS, accentId, customAccent, glassOn, blurPx, glassAlpha, brightness,
   setAccent, setCustomAccent, setGlass, setBlur, setGlassAlpha, setBrightness,
   themeMode, setThemeMode, bgEnabled, bgPath, bgFit, setBgEnabled, setBgFit, refreshBackground,
+  tabletMode, setTabletMode,
 } from '../../theme';
 import { icon } from '../../v2/icons';
 import ImportBillDialog from '../../components/ImportBillDialog.vue';
@@ -117,6 +118,13 @@ async function doClear(scope: 'tx' | 'all'): Promise<void> {
           <div class="v2-seg" style="margin-left:auto">
             <button v-for="[v, lbl] in THEME_OPTS" :key="v" :class="{ on: themeMode === v }" @click="setThemeMode(v)">{{ lbl }}</button>
           </div>
+        </div>
+        <div class="v2-set-row">
+          <div>
+            <div class="set-label">平板模式</div>
+            <div class="set-desc">细侧栏 + 黑色点缀卡片；关闭为经典侧栏（点品牌行可展开/收起）</div>
+          </div>
+          <button class="v2-toggle" :class="{ on: tabletMode }" style="margin-left:auto" @click="setTabletMode(!tabletMode)" />
         </div>
         <div class="v2-set-row">
           <div>

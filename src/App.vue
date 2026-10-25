@@ -7,10 +7,10 @@ import { Minus, Close } from '@element-plus/icons-vue';
 import { api } from './api';
 import {
   initAppearance, isDark, themeMode, toggleTheme, brightnessOverlayStyle,
-  bgEnabled, bgPath, bgFit, bgStamp,
+  bgEnabled, bgPath, bgFit, bgStamp, tabletMode,
 } from './theme';
 import { icon } from './v2/icons';
-import { openQuickAdd, quickVisible, loadUiPrefs, v2PanelOpen } from './v2/ui';
+import { openQuickAdd, quickVisible, loadUiPrefs, v2PanelOpen, railCollapsed, toggleRail } from './v2/ui';
 import QuickAdd from './v2/QuickAdd.vue';
 import { toasts, kill, toast } from './v2/toast';
 
@@ -84,6 +84,19 @@ function themeIcon(): string {
 function onThemeToggle(e: MouseEvent): void {
   toggleTheme({ x: e.clientX || window.innerWidth - 70, y: e.clientY || window.innerHeight - 60 });
 }
+
+// ---------- 经典模式侧栏（平板模式关）：品牌行点击收/展 ----------
+const footerText = computed(() => {
+  const cur = isDark.value ? '深色' : '浅色';
+  return themeMode.value === 'system' ? `跟随系统 · ${cur}` : `${cur}模式`;
+});
+const brandTitle = computed(() =>
+  tabletMode.value ? '账痕 BillTrace' : (railCollapsed.value ? '展开侧边栏' : '收起侧边栏'),
+);
+function onBrandClick(): void {
+  if (tabletMode.value) router.push('/overview');
+  else toggleRail();
+}
 function onQuickSaved(): void {
   toast('已记一笔');
   window.dispatchEvent(new CustomEvent('v2-refresh'));
@@ -132,27 +145,42 @@ onUnmounted(() => {
     <div class="zj-brightness" :style="overlayStyle as any" />
 
     <div class="zj-layout">
-      <!-- v2 侧栏：上黑下浅两段式 -->
-      <aside class="v2-rail">
+      <!-- v2 侧栏：平板模式=上黑下浅两段式细条；经典模式=整块玻璃卡可展开（点品牌行收/展） -->
+      <aside class="v2-rail" :class="{ classic: !tabletMode, collapsed: !tabletMode && railCollapsed }">
         <div class="v2-rail-main">
-          <img class="v2-logo" src="/app-icon.png" alt="账痕" title="账痕 BillTrace" @click="router.push('/overview')">
+          <div class="v2-brand" :title="brandTitle" @click="onBrandClick">
+            <img class="v2-logo" src="/app-icon.png" alt="账痕">
+            <span class="v2-logo-name">账痕</span>
+          </div>
           <button class="v2-add" title="记一笔 (Ctrl+N)" @click="openQuickAdd()">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span class="v2-rail-label">记一笔</span>
           </button>
           <nav style="display:contents">
             <button
               v-for="nav in navs" :key="nav.path"
               class="v2-nav-item" :class="{ active: activePath === nav.path }"
               :title="nav.title" @click="router.push(nav.path)"
-              v-html="icon(nav.ic, 20)"
-            />
+            >
+              <span class="v2-nav-ic" v-html="icon(nav.ic, 20)" />
+              <span class="v2-rail-label">{{ nav.title }}</span>
+            </button>
           </nav>
         </div>
         <div class="v2-rail-gap" />
         <div class="v2-rail-foot">
-          <button class="v2-rail-btn" :title="themeMode === 'system' ? '切换深浅主题（跟随系统中）' : '切换深浅主题'" @click="onThemeToggle" v-html="themeIcon()" />
-          <button class="v2-rail-btn" title="设置" @click="router.push('/settings')" v-html="icon('gear', 19)" />
-          <button class="v2-rail-btn exit" title="退出" @click="appWin.close()" v-html="icon('exit', 19)" />
+          <button class="v2-rail-btn" :title="themeMode === 'system' ? '切换深浅主题（跟随系统中）' : '切换深浅主题'" @click="onThemeToggle">
+            <span class="v2-nav-ic" v-html="themeIcon()" />
+            <span class="v2-rail-label">{{ footerText }}</span>
+          </button>
+          <button class="v2-rail-btn" title="设置" @click="router.push('/settings')">
+            <span class="v2-nav-ic" v-html="icon('gear', 19)" />
+            <span class="v2-rail-label">设置</span>
+          </button>
+          <button class="v2-rail-btn exit" title="退出" @click="appWin.close()">
+            <span class="v2-nav-ic" v-html="icon('exit', 19)" />
+            <span class="v2-rail-label">退出</span>
+          </button>
         </div>
       </aside>
 

@@ -38,6 +38,20 @@ export const bgPath = ref('');
 export const bgFit = ref<'cover' | 'contain' | 'fill' | 'tile'>('cover');
 export const bgStamp = ref(Date.now()); // 缓存击穿：换图后立即生效
 
+// ---------- 平板模式（开 = 细侧栏 + 黑色点缀；关 = 经典可展开侧栏、浅色全浅） ----------
+export const tabletMode = ref(false);
+
+function applyTablet() {
+  // 经典模式挂 classic-ui 类：侧栏可展开、浅色下去掉黑侧栏/黑锚点卡/黑浮层（见 v2.css）
+  document.documentElement.classList.toggle('classic-ui', !tabletMode.value);
+}
+
+export async function setTabletMode(on: boolean) {
+  tabletMode.value = on;
+  applyTablet();
+  try { await api.setSetting('tabletMode', String(on)); } catch { /* 忽略 */ }
+}
+
 function currentAccentColor(): string {
   if (customAccent.value) return customAccent.value;
   const acc = ACCENTS.find((a) => a.id === accentId.value) ?? ACCENTS[0];
@@ -74,6 +88,7 @@ function applyAll() {
   applyTheme();
   applyAccent();
   applyGlass();
+  applyTablet();
 }
 
 async function loadAll() {
@@ -106,6 +121,8 @@ async function loadAll() {
     bgPath.value = (await api.getBackground()) ?? '';
     const f = await api.getSetting('bgFit');
     if (f === 'cover' || f === 'contain' || f === 'fill' || f === 'tile') bgFit.value = f;
+    // 平板模式：v0.4.0 的 UI v2 形态；未设置过（老用户）默认经典侧栏（纯浅/深）
+    tabletMode.value = (await api.getSetting('tabletMode')) === 'true';
   } catch { /* 用默认值 */ }
   applyAll();
 }
