@@ -12,7 +12,7 @@
   --zj-logo-from: #877FC1;
   --zj-logo-to: #b3a7e6;
 
-  --zj-bg: #F5F6FA;
+  --zj-bg: #eef0f4;
   --zj-card: rgba(255, 255, 255, 0.72);
   --zj-card-solid: #ffffff;
   --zj-card-hover: rgba(248, 247, 252, 0.9);
@@ -36,7 +36,7 @@
   --zj-shadow-hover:
     0 2px 4px rgba(26, 31, 51, 0.06),
     0 20px 48px rgba(26, 31, 51, 0.15);
-  --zj-inset: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  --zj-inset: inset 0 1px 0 rgba(255, 255, 255, 0.45);
 
   --zj-blur-px: 24px;
   --zj-glass-alpha: 70; /* 玻璃强度：实底色占比百分比（no-glass 时按 100 处理） */
@@ -150,11 +150,7 @@ body {
 }
 
 html.dark body {
-  background:
-    radial-gradient(1200px 750px at 10% -12%, rgba(64, 96, 210, 0.20) 0%, transparent 55%),
-    radial-gradient(1000px 680px at 106% 110%, rgba(120, 74, 214, 0.14) 0%, transparent 58%),
-    radial-gradient(800px 500px at 85% -20%, rgba(38, 208, 206, 0.06) 0%, transparent 50%),
-    var(--zj-bg);
+  background: var(--zj-bg);
 }
 
 /* 亮度调节覆盖层（App.vue 渲染，位于内容之下） */
@@ -173,6 +169,32 @@ html.dark body {
   pointer-events: none;
   z-index: 0;
   transition: opacity 0.3s var(--zj-ease);
+}
+
+/* 背景柔光墙（移植拾刻三层结构：墙 → 半透明材质 → 叶子卡片才做玻璃）：
+   强调色驱动的三大光斑 + 整层轻模糊，给毛玻璃"可糊之物"、把三个板块拉开层次 */
+.zj-wall {
+  position: fixed;
+  inset: -60px;
+  pointer-events: none;
+  z-index: 0;
+  background-color: var(--zj-bg);
+  background-image:
+    radial-gradient(95% 75% at 14% -8%, color-mix(in srgb, var(--zj-primary) 16%, transparent), transparent 62%),
+    radial-gradient(85% 70% at 103% 24%, color-mix(in srgb, var(--zj-primary) 12%, transparent), transparent 64%),
+    radial-gradient(130% 95% at 48% 118%, color-mix(in srgb, var(--zj-primary) 10%, transparent), transparent 66%);
+  filter: blur(18px);
+}
+html.dark .zj-wall {
+  background-image:
+    radial-gradient(95% 75% at 14% -8%, color-mix(in srgb, var(--zj-primary) 20%, transparent), transparent 62%),
+    radial-gradient(85% 70% at 103% 24%, color-mix(in srgb, var(--zj-primary) 14%, transparent), transparent 64%),
+    radial-gradient(130% 95% at 48% 118%, color-mix(in srgb, var(--zj-primary) 10%, transparent), transparent 66%);
+}
+/* 缩放窗口 / 侧栏收展动画期间：暂时关掉墙的模糊（重排大层最贵的两帧来源） */
+html.resizing .zj-wall,
+html.rail-anim .zj-wall {
+  filter: none;
 }
 
 /* 主题切换辐射动效（View Transitions） */
@@ -426,18 +448,18 @@ html.dark .zj-logo .logo-dot {
   display: none; /* 已由 .zj-content / .zj-content-scroll 取代（保留类名兼容历史引用） */
 }
 
-/* 内容区：一整块圆角卡。禁止加 backdrop-filter——弹窗挂载其内部，
-   容器带玻璃会把 position:fixed 弹层困住并裁剪（DESIGN-SPEC §1.2） */
+/* 内容区：不再是一块"底卡"——卡片直接浮在柔光墙上（拾刻式三层结构，
+   内容区自身透明；注意仍然不加 backdrop-filter，避免把 fixed 弹层困进容器） */
 .zj-content {
   flex: 1;
   min-width: 0;
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--zj-border);
-  border-radius: var(--zj-radius);
-  background: color-mix(in srgb, var(--zj-card-solid) 55%, transparent);
-  box-shadow: var(--zj-shadow), var(--zj-inset);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
 }
 

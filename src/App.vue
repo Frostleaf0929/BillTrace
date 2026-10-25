@@ -85,18 +85,12 @@ function onThemeToggle(e: MouseEvent): void {
   toggleTheme({ x: e.clientX || window.innerWidth - 70, y: e.clientY || window.innerHeight - 60 });
 }
 
-// ---------- 经典模式侧栏（平板模式关）：品牌行点击收/展 ----------
+// ---------- 经典模式侧栏（平板模式关）：品牌行/收起钮收展，标签 v-if 进出（不做 max-width 动画，拾刻同款顺滑） ----------
 const footerText = computed(() => {
   const cur = isDark.value ? '深色' : '浅色';
   return themeMode.value === 'system' ? `跟随系统 · ${cur}` : `${cur}模式`;
 });
-const brandTitle = computed(() =>
-  tabletMode.value ? '账痕 BillTrace' : (railCollapsed.value ? '展开侧边栏' : '收起侧边栏'),
-);
-function onBrandClick(): void {
-  if (tabletMode.value) router.push('/overview');
-  else toggleRail();
-}
+const showLabels = computed(() => !tabletMode.value && !railCollapsed.value);
 function onQuickSaved(): void {
   toast('已记一笔');
   window.dispatchEvent(new CustomEvent('v2-refresh'));
@@ -140,21 +134,31 @@ onUnmounted(() => {
       <button class="tb-btn close" title="关闭" @click="appWin.close()"><el-icon><Close /></el-icon></button>
     </div>
 
-    <!-- 背景图层（设置里可启用） -->
+    <!-- 背景层：柔光墙（强调色驱动，给毛玻璃可糊之物并拉开层次）→ 用户壁纸 → 亮度 -->
+    <div class="zj-wall" />
     <div v-if="bgEnabled && bgPath" class="zj-bg-image" :style="bgStyle" />
     <div class="zj-brightness" :style="overlayStyle as any" />
 
     <div class="zj-layout">
-      <!-- v2 侧栏：平板模式=上黑下浅两段式细条；经典模式=整块玻璃卡可展开（点品牌行收/展） -->
+      <!-- v2 侧栏：平板模式=上黑下浅两段式细条；经典模式=拾刻式整卡（专用收起钮，收起后图标即展开入口） -->
       <aside class="v2-rail" :class="{ classic: !tabletMode, collapsed: !tabletMode && railCollapsed }">
         <div class="v2-rail-main">
-          <div class="v2-brand" :title="brandTitle" @click="onBrandClick">
+          <div v-if="tabletMode" class="v2-brand" title="账痕 BillTrace" @click="router.push('/overview')">
             <img class="v2-logo" src="/app-icon.png" alt="账痕">
-            <span class="v2-logo-name">账痕</span>
+          </div>
+          <div v-else class="v2-brand" :title="railCollapsed ? '展开侧边栏' : '收起侧边栏'" @click="toggleRail()">
+            <button v-if="railCollapsed" class="v2-logo-btn" tabindex="-1">
+              <img class="v2-logo-sm" src="/app-icon.png" alt="账痕" draggable="false">
+            </button>
+            <template v-else>
+              <span class="v2-brand-name">账痕</span>
+              <span class="v2-brand-en">BILLTRACE</span>
+              <button class="v2-collapse-btn" title="收起侧边栏" tabindex="-1" v-html="icon('collapse', 15)" />
+            </template>
           </div>
           <button class="v2-add" title="记一笔 (Ctrl+N)" @click="openQuickAdd()">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            <span class="v2-rail-label">记一笔</span>
+            <span v-if="showLabels" class="v2-rail-label">记一笔</span>
           </button>
           <nav style="display:contents">
             <button
@@ -163,7 +167,7 @@ onUnmounted(() => {
               :title="nav.title" @click="router.push(nav.path)"
             >
               <span class="v2-nav-ic" v-html="icon(nav.ic, 20)" />
-              <span class="v2-rail-label">{{ nav.title }}</span>
+              <span v-if="showLabels" class="v2-rail-label">{{ nav.title }}</span>
             </button>
           </nav>
         </div>
@@ -171,15 +175,15 @@ onUnmounted(() => {
         <div class="v2-rail-foot">
           <button class="v2-rail-btn" :title="themeMode === 'system' ? '切换深浅主题（跟随系统中）' : '切换深浅主题'" @click="onThemeToggle">
             <span class="v2-nav-ic" v-html="themeIcon()" />
-            <span class="v2-rail-label">{{ footerText }}</span>
+            <span v-if="showLabels" class="v2-rail-label">{{ footerText }}</span>
           </button>
           <button class="v2-rail-btn" title="设置" @click="router.push('/settings')">
             <span class="v2-nav-ic" v-html="icon('gear', 19)" />
-            <span class="v2-rail-label">设置</span>
+            <span v-if="showLabels" class="v2-rail-label">设置</span>
           </button>
           <button class="v2-rail-btn exit" title="退出" @click="appWin.close()">
             <span class="v2-nav-ic" v-html="icon('exit', 19)" />
-            <span class="v2-rail-label">退出</span>
+            <span v-if="showLabels" class="v2-rail-label">退出</span>
           </button>
         </div>
       </aside>

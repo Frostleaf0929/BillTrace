@@ -23,6 +23,7 @@ export const ICONS: Record<string, string> = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   check: '<path d="M5 12l5 5L20 7"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  collapse: '<path d="M11.5 7l-5 5 5 5M17.5 7l-5 5 5 5"/>',
 };
 
 export function icon(name: string, size = 20): string {

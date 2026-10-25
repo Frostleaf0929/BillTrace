@@ -20,6 +20,10 @@ export async function loadUiPrefs(): Promise<void> {
 export async function toggleRail(): Promise<void> {
   railCollapsed.value = !railCollapsed.value;
   try { await api.setSetting('sidebarCollapsed', String(railCollapsed.value)); } catch { /* 忽略 */ }
+  // 收展动画期间（~240ms）关掉墙面模糊，收排卡顿（html.rail-anim 见 global.css）
+  const root = document.documentElement;
+  root.classList.add('rail-anim');
+  window.setTimeout(() => root.classList.remove('rail-anim'), 300);
 }
 
 export function setPanelMode(v: 'float' | 'dock'): void {

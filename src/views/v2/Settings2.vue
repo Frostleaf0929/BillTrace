@@ -131,7 +131,7 @@ async function doClear(scope: 'tx' | 'all'): Promise<void> {
         <div class="v2-set-row">
           <div>
             <div class="set-label">设计风格</div>
-            <div class="set-desc">按不同设计规范做的主题方向：苹果 = 材质玻璃 / M3 = 色调表面 / 鸿蒙 = 纯净卡片</div>
+            <div class="set-desc">苹果=材质玻璃 · M3=色调表面 · 鸿蒙=纯净卡片</div>
           </div>
           <div class="v2-seg" style="margin-left:auto">
             <button v-for="[s, lbl] in STYLE_OPTS" :key="s" :class="{ on: designStyle === s }" @click="setDesignStyle(s)">{{ lbl }}</button>
@@ -147,12 +147,13 @@ async function doClear(scope: 'tx' | 'all'): Promise<void> {
               v-for="a in ACCENTS" :key="a.id" class="v2-swatch" :class="{ on: accentId === a.id && !customAccent }"
               :style="{ background: a.light }" :title="a.name" @click="setAccent(a.id)"
             />
-            <input
-              type="color" :value="customAccent || (ACCENTS.find((a) => a.id === accentId)?.light ?? '#877FC1')"
-              style="width:26px;height:26px;border:0;background:none;cursor:pointer;padding:0"
-              title="自定义强调色"
-              @change="setCustomAccent(($event.target as HTMLInputElement).value)"
-            >
+            <label class="v2-picker" title="自定义强调色">
+              <input
+                type="color" :value="customAccent || (ACCENTS.find((a) => a.id === accentId)?.light ?? '#877FC1')"
+                @change="setCustomAccent(($event.target as HTMLInputElement).value)"
+              >
+              <svg class="v2-pk-edit" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </label>
           </div>
         </div>
         <div class="v2-set-row">
