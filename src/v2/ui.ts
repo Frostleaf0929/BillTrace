@@ -1,11 +1,24 @@
 // v2 全局 UI 状态（快速记账面板 / 面板样式）
-import { ref } from 'vue';
+import { ref, watchEffect } from 'vue';
 import { api } from '../api';
 
 export const quickVisible = ref(false);
 export const v2PanelOpen = ref(false); // 任一右侧面板打开时为真（隐藏窗口按钮用）
 export const panelMode = ref<'float' | 'dock'>('float');
 export const railCollapsed = ref(false); // 经典模式侧栏收起（平板模式是固定细条，无此概念）
+
+// 移动端（安卓 APK 或窄窗口）：侧栏换底部悬浮 Dock。
+// 安卓 WebView 的 UA 固定含 "Android"，恒为移动布局（横屏 CSS 宽度可能超过 900，不能只看宽度）；
+// 桌面端窄窗口（<900，即桌面最小窗宽以下）也走移动布局，方便浏览器预览。
+export const isMobile = ref(
+  /Android/i.test(navigator.userAgent) || window.matchMedia('(max-width: 899px)').matches,
+);
+window.matchMedia('(max-width: 899px)').addEventListener('change', (e) => {
+  isMobile.value = /Android/i.test(navigator.userAgent) || e.matches;
+});
+watchEffect(() => {
+  document.documentElement.classList.toggle('zj-mobile', isMobile.value);
+});
 
 export async function loadUiPrefs(): Promise<void> {
   try {

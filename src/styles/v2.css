@@ -1086,3 +1086,93 @@ html[data-style='hoos'] .v2-pagehead h1 { font-size: 24px; letter-spacing: 0; }
 }
 .vs-opt.act { background: var(--v2-surface-2); color: var(--v2-ink); }
 .vs-opt.on { background: var(--v2-accent-tint); color: var(--v2-accent-deep); font-weight: 600; }
+
+/* ============================================================
+   移动端 / 安卓（html.zj-mobile 由 ui.ts 按安卓 UA 或窄窗口 <900 挂载）
+   侧栏整体让位：底部悬浮 Dock（玻璃材质同侧栏）+ 记一笔 FAB + 底部抽屉面板
+   ============================================================ */
+
+@keyframes v2dockin {
+  from { opacity: 0; transform: translateX(-50%) translateY(14px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.v2-dock {
+  position: fixed;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 2400;
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--zj-card-solid) calc(var(--zj-glass-alpha) * 1%), transparent);
+  backdrop-filter: var(--zj-glass-blur);
+  -webkit-backdrop-filter: var(--zj-glass-blur);
+  border: 1px solid var(--v2-line);
+  box-shadow: var(--zj-shadow), var(--zj-inset);
+  animation: v2dockin 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.v2-dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 50px;
+  padding: 7px 6px 6px;
+  border-radius: 16px;
+  color: var(--v2-ink-3);
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: background var(--v2-dur), color var(--v2-dur), transform var(--v2-dur);
+}
+.v2-dock-item:active { transform: scale(0.94); }
+.v2-dock-item.active { color: var(--v2-accent); background: var(--v2-accent-tint); }
+.v2-dock-ic { display: block; }
+.v2-dock-label { font-size: 10px; letter-spacing: 0.3px; white-space: nowrap; }
+
+/* 记一笔 FAB：悬浮于 Dock 右上方，强调色实底（同桌面 .v2-add 语言） */
+.v2-fab {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  z-index: 2400;
+  width: 54px;
+  height: 54px;
+  border-radius: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: var(--v2-accent);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 26px var(--v2-accent-tint), 0 4px 12px rgba(15, 15, 20, 0.18);
+  transition: transform var(--v2-dur) cubic-bezier(0.22, 0.61, 0.36, 1), filter var(--v2-dur);
+}
+.v2-fab:active { transform: scale(0.94); }
+
+/* 布局适配：外框 16→12、内容滚动区给 Dock 让位；桌面专属元素隐藏 */
+html.zj-mobile .zj-layout { padding: 12px; }
+html.zj-mobile .zj-content-scroll { padding: 14px 14px calc(96px + env(safe-area-inset-bottom, 0px)); }
+html.zj-mobile .zj-content-drag { display: none; }
+html.zj-mobile .tb-btns { display: none; }
+
+/* 快速记账 / 编辑面板：移动端一律底部抽屉（带兜底的 dvh 写法） */
+html.zj-mobile .v2-panel {
+  top: auto;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  max-height: min(88vh, 720px);
+  max-height: min(88dvh, 720px);
+  border-radius: 24px 24px 0 0;
+  transform: translateY(105%);
+  box-shadow: 0 -20px 60px rgba(10, 12, 30, 0.3);
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+html.zj-mobile .v2-panel.show { transform: none; }

@@ -130,13 +130,27 @@ function layoutNav(): void {
   const el = navEl.value;
   if (!el) return;
   const wpx = el.clientWidth;
-  const x0 = (range.value[0] / Math.max(1, all.value.length - 1)) * wpx;
-  const x1 = (range.value[1] / Math.max(1, all.value.length - 1)) * wpx;
+  // 选区索引可能来自旧状态/预设，可能超出当前序列（数据少或为空时）→ 先钳位再换算像素，
+  // 否则 x1 会算到容器几十倍宽，撑出整页横向滚动
+  const last = Math.max(0, all.value.length - 1);
+  const i0 = Math.min(Math.max(0, range.value[0]), last);
+  const i1 = Math.min(Math.max(i0, range.value[1]), last);
+  const x0 = (i0 / Math.max(1, last)) * wpx;
+  const x1 = (i1 / Math.max(1, last)) * wpx;
   if (winEl.value) { winEl.value.style.left = x0 + 'px'; winEl.value.style.width = Math.max(14, x1 - x0) + 'px'; }
   if (dimL.value) dimL.value.style.width = x0 + 'px';
   if (dimR.value) dimR.value.style.width = Math.max(0, wpx - x1) + 'px';
 }
 watch([all, () => width.value], () => setTimeout(layoutNav, 0), { immediate: true });
+// 容器尺寸变化（窗口缩放 / 移动端横竖屏）后要重算选框：
+// 否则沿用旧宽度，窄屏上选框被算成几千像素，撑出整页横向滚动
+let navRO: ResizeObserver | undefined;
+onMounted(() => {
+  if (!navEl.value || typeof ResizeObserver === 'undefined') return;
+  navRO = new ResizeObserver(() => layoutNav());
+  navRO.observe(navEl.value);
+});
+onUnmounted(() => navRO?.disconnect());
 
 function setRange(i0: number, i1: number): void {
   range.value = [Math.min(Math.max(0, Math.round(i0)), all.value.length - 1), Math.min(Math.max(Math.round(i1), 0), all.value.length - 1)];

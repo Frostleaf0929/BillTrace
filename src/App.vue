@@ -10,13 +10,18 @@ import {
   bgEnabled, bgPath, bgFit, bgStamp, tabletMode,
 } from './theme';
 import { icon } from './v2/icons';
-import { openQuickAdd, quickVisible, loadUiPrefs, v2PanelOpen, railCollapsed, toggleRail } from './v2/ui';
+import { openQuickAdd, quickVisible, loadUiPrefs, v2PanelOpen, railCollapsed, toggleRail, isMobile } from './v2/ui';
 import QuickAdd from './v2/QuickAdd.vue';
+import BottomDock from './v2/BottomDock.vue';
 import { toasts, kill, toast } from './v2/toast';
 
 const route = useRoute();
 const router = useRouter();
-const appWin = getCurrentWindow();
+// 纯浏览器（无 Tauri 环境）预览时 getCurrentWindow 会抛错：无 Tauri 就置空，
+// 相关按钮在移动端本就不渲染，桌面按钮点了无效但不崩
+const appWin = '__TAURI_INTERNALS__' in window
+  ? getCurrentWindow()
+  : (null as unknown as ReturnType<typeof getCurrentWindow>);
 
 const navs = [
   { path: '/overview', title: '概览', ic: 'overview' },
@@ -111,11 +116,14 @@ onMounted(async () => {
       openQuickAdd();
     }
   });
-  unlistenResize = await appWin.onResized(() => {
-    document.documentElement.classList.add('resizing');
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => document.documentElement.classList.remove('resizing'), 200);
-  });
+  // 窗口 API 在安卓 / 浏览器上不可用（无桌面窗口句柄）：保护性注册，失败不影响启动
+  try {
+    unlistenResize = await appWin.onResized(() => {
+      document.documentElement.classList.add('resizing');
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => document.documentElement.classList.remove('resizing'), 200);
+    });
+  } catch { /* 移动端无窗口事件 */ }
 });
 
 onUnmounted(() => {
@@ -125,8 +133,8 @@ onUnmounted(() => {
 
 <template>
   <div class="zj-root">
-    <!-- 悬浮窗口按钮（无标题栏） -->
-    <div class="tb-btns" v-show="!v2PanelOpen">
+    <!-- 悬浮窗口按钮（无标题栏；移动端无此概念） -->
+    <div class="tb-btns" v-show="!v2PanelOpen && !isMobile">
       <button class="tb-btn" title="最小化" @click="appWin.minimize()"><el-icon><Minus /></el-icon></button>
       <button class="tb-btn" title="最大化 / 还原" @click="appWin.toggleMaximize()">
         <svg width="11" height="11" viewBox="0 0 11 11"><rect x="0.5" y="0.5" width="10" height="10" fill="none" stroke="currentColor" /></svg>
@@ -140,8 +148,8 @@ onUnmounted(() => {
     <div class="zj-brightness" :style="overlayStyle as any" />
 
     <div class="zj-layout">
-      <!-- v2 侧栏：平板模式=上黑下浅两段式细条；经典模式=拾刻式整卡（专用收起钮，收起后图标即展开入口） -->
-      <aside class="v2-rail" :class="{ classic: !tabletMode, collapsed: !tabletMode && railCollapsed }">
+      <!-- v2 侧栏（桌面）：平板模式=上黑下浅两段式细条；经典模式=拾刻式整卡。移动端整体让位给底部 Dock -->
+      <aside v-if="!isMobile" class="v2-rail" :class="{ classic: !tabletMode, collapsed: !tabletMode && railCollapsed }">
         <div class="v2-rail-main">
           <div v-if="tabletMode" class="v2-brand" title="账痕 BillTrace" @click="router.push('/overview')">
             <img class="v2-logo" src="/app-icon.png" alt="账痕">
@@ -187,6 +195,9 @@ onUnmounted(() => {
           </button>
         </div>
       </aside>
+
+      <!-- 移动端：底部悬浮 Dock（六项导航）+ 记一笔 FAB，替代桌面侧栏 -->
+      <BottomDock v-if="isMobile" />
 
       <main class="zj-content">
         <div class="zj-content-drag" data-tauri-drag-region @dblclick="appWin.toggleMaximize()" />
