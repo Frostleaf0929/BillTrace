@@ -1,7 +1,10 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router';
+
+// VITE_HASH=1 的测试构建（file:// 模拟台无法用 web history）走 hash 路由；正常构建不变
+const history = import.meta.env.VITE_HASH === '1' ? createWebHashHistory() : createWebHistory();
 
 const router = createRouter({
-  history: createWebHistory(),
+  history,
   routes: [
     { path: '/', redirect: '/overview' },
     { path: '/overview', component: () => import('./views/v2/Overview2.vue'), meta: { title: '概览' } },

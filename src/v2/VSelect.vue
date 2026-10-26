@@ -3,6 +3,9 @@
 // 全站统一换用本组件——弹层为实底圆角卡、max-height 320 滚动、箭头随开合方向翻转、键盘可用。
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 
+// 多根组件（弹层 Teleport 到 body）：属性不自动透传，手动挂到根节点，保证外部 style/class 生效
+defineOptions({ name: 'VSelect', inheritAttrs: false });
+
 const props = defineProps<{
   modelValue: string;
   options: { value: string; label: string }[];
@@ -111,7 +114,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="v2-vselect" :class="{ block }">
+  <div class="v2-vselect" :class="{ block }" v-bind="$attrs">
     <button
       type="button" ref="triggerRef" class="v2-vselect-trigger" :class="{ open, up }"
       :title="selectedLabel || placeholder || ''" @click="toggle" @keydown="onKey"

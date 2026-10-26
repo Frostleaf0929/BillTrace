@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // v2 快速记账面板（右侧滑入）
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { api } from '../api';
 import type { Category, AccountBalance } from '../types';
 import { catColor, catIcon } from './icons';
@@ -9,7 +9,8 @@ import { toast } from './toast';
 import VSelect from './VSelect.vue';
 import { ElMessageBox } from 'element-plus';
 
-const props = defineProps<{ visible: boolean }>();
+// visible 由 App.vue 的 v-if 控制（挂载即打开），组件内不再依赖它
+defineProps<{ visible: boolean }>();
 const emit = defineEmits<{ close: []; saved: [] }>();
 
 const type = ref<'expense' | 'income' | 'transfer'>('expense');
@@ -56,9 +57,10 @@ async function loadRefs(): Promise<void> {
   } catch { /* 忽略 */ }
 }
 
-watch(() => props.visible, (v) => { v2PanelOpen.value = v; });
-watch(() => props.visible, async (v) => {
-  if (!v) return;
+// 关键：本组件由 v-if 挂载（挂载时 visible 已经是 true），watch(visible) 永远不会触发——
+// 曾经导致打开时分类/账户/日期全空（用户反馈"根本没有选择的地方"）。改为挂载即初始化。
+onMounted(async () => {
+  v2PanelOpen.value = true;
   await loadRefs();
   type.value = 'expense';
   amount.value = '';
@@ -70,6 +72,9 @@ watch(() => props.visible, async (v) => {
   date.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   note.value = '';
   setTimeout(() => (document.getElementById('v2-qa-amount') as HTMLInputElement | null)?.focus(), 240);
+});
+onUnmounted(() => {
+  v2PanelOpen.value = false;
 });
 
 async function addL1(): Promise<void> {
@@ -166,11 +171,10 @@ function onKey(e: KeyboardEvent): void {
       <div class="v2-field-label">账户（{{ type === 'income' ? '转入' : '转出' }}）</div>
       <VSelect v-model="account" :options="accountOpts" block />
     </template>
-    <div class="v2-field-label">日期与备注</div>
-    <div style="display:flex;gap:10px">
-      <input v-model="date" class="v2-text-input" type="date" style="flex:none;width:170px">
-      <input v-model="note" class="v2-text-input" placeholder="备注（可选）">
-    </div>
+    <div class="v2-field-label">日期</div>
+    <input v-model="date" class="v2-text-input num" type="date">
+    <div class="v2-field-label">备注（可选）</div>
+    <input v-model="note" class="v2-text-input" placeholder="填写备注">
     <div style="display:flex;gap:10px;margin-top:24px">
       <button class="v2-btn primary" style="flex:1;justify-content:center" :disabled="saving" @click="save(false)">保存</button>
       <button class="v2-btn ghost" :disabled="saving" @click="save(true)">保存并继续</button>
