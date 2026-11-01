@@ -10,7 +10,7 @@ import { monthLabel } from '../../v2/parts';
 import TsChart from '../../v2/TsChart.vue';
 import TxPanel from '../../v2/TxPanel.vue';
 import { toast } from '../../v2/toast';
-import { openQuickAdd } from '../../v2/ui';
+import { openQuickAdd, isMobile } from '../../v2/ui';
 
 function money(n: number): string {
   return '¥' + n.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
@@ -279,7 +279,10 @@ defineExpose({ openQuick });
           <button :class="{ on: ovR === 'year' }" @click="ovR = 'year'">年</button>
           <button :class="{ on: ovR === 'all' }" @click="ovR = 'all'">总</button>
         </div>
-        <button class="v2-btn primary" @click="openQuick">
+        <button v-if="isMobile" class="v2-head-gear" title="设置" @click="router.push('/settings')">
+          <span v-html="icon('gear', 19)" />
+        </button>
+        <button class="v2-btn primary head-add" @click="openQuick">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           记一笔
         </button>

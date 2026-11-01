@@ -59,8 +59,13 @@ async function loadRefs(): Promise<void> {
 
 // 关键：本组件由 v-if 挂载（挂载时 visible 已经是 true），watch(visible) 永远不会触发——
 // 曾经导致打开时分类/账户/日期全空（用户反馈"根本没有选择的地方"）。改为挂载即初始化。
+function onForceClose(): void {
+  emit('close');
+}
 onMounted(async () => {
   v2PanelOpen.value = true;
+  // 移动端返回键关面板：全局关闭事件 → close（守卫见 ui.ts）
+  window.addEventListener('v2-close-panel', onForceClose);
   await loadRefs();
   type.value = 'expense';
   amount.value = '';
@@ -75,6 +80,7 @@ onMounted(async () => {
 });
 onUnmounted(() => {
   v2PanelOpen.value = false;
+  window.removeEventListener('v2-close-panel', onForceClose);
 });
 
 async function addL1(): Promise<void> {

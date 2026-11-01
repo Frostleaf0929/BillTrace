@@ -10,7 +10,7 @@ import {
   bgEnabled, bgPath, bgFit, bgStamp, tabletMode,
 } from './theme';
 import { icon } from './v2/icons';
-import { openQuickAdd, quickVisible, loadUiPrefs, v2PanelOpen, railCollapsed, toggleRail, isMobile } from './v2/ui';
+import { openQuickAdd, quickVisible, loadUiPrefs, v2PanelOpen, railCollapsed, toggleRail, isMobile, attachSheetDrag } from './v2/ui';
 import QuickAdd from './v2/QuickAdd.vue';
 import BottomDock from './v2/BottomDock.vue';
 import { toasts, kill, toast } from './v2/toast';
@@ -102,6 +102,12 @@ function onQuickSaved(): void {
 }
 
 onMounted(async () => {
+  // 记一笔抽屉：把手下拉关闭（仅移动端生效，助手内部自行判断）。
+  // Vue 3.5 模板 ref 绑定在本工程不生效（档案 §坑5 再现，含 useTemplateRef），按档案改 id 直查
+  const quickSheet = document.getElementById('quick-sheet');
+  if (quickSheet) {
+    attachSheetDrag(quickSheet, () => quickVisible.value, () => { quickVisible.value = false; });
+  }
   await initAppearance();
   await loadUiPrefs();
   try {
@@ -213,7 +219,8 @@ onUnmounted(() => {
 
     <!-- v2 全局层：快速记账 / 遮罩 / Toast -->
     <div class="v2-overlay" :class="{ show: quickVisible }" @click="quickVisible = false" />
-    <div class="v2-panel" :class="{ show: quickVisible }">
+    <div id="quick-sheet" class="v2-panel" :class="{ show: quickVisible }">
+      <button type="button" class="v2-sheet-handle" title="下拉收起" aria-label="下拉收起" />
       <QuickAdd v-if="quickVisible" :visible="quickVisible" @close="quickVisible = false" @saved="onQuickSaved" />
     </div>
     <div class="v2-toasts">

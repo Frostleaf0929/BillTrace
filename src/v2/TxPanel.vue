@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // v2 交易详情滑出面板（编辑/删除）
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { api } from '../api';
 import type { Category, Tx } from '../types';
-import { v2PanelOpen } from './ui';
+import { v2PanelOpen, attachSheetDrag } from './ui';
 import VSelect from './VSelect.vue';
 
 const props = defineProps<{ tx: Tx | null; visible: boolean }>();
@@ -36,6 +36,19 @@ const transferInOpts = computed(() => accounts.value.filter((o) => o !== account
 const subAcc = computed(() => (txType.value === '转账' ? `${accountFrom.value || '…'} → ${accountTo.value || '…'}` : account.value));
 
 watch(() => props.visible, (v) => { v2PanelOpen.value = v; });
+
+// 移动端：把手下拉关闭 + 返回键关面板（守卫见 ui.ts）
+// Vue 3.5 模板 ref 绑定在本工程不生效（档案 §坑5 再现），改用选择器直查：
+// 同一时刻只有一个视图挂载，全局仅存在一个 TxPanel 的 aside
+const onForceClose = (): void => { if (props.visible) emit('close'); };
+onMounted(() => {
+  const el = document.querySelector('aside.v2-panel');
+  if (el) attachSheetDrag(el as HTMLElement, () => props.visible, () => emit('close'));
+  window.addEventListener('v2-close-panel', onForceClose);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener('v2-close-panel', onForceClose);
+});
 watch(() => props.visible, async (v) => {
   if (!v || !props.tx) return;
   const t = props.tx;
@@ -146,6 +159,7 @@ async function del(): Promise<void> {
   <!-- 遮罩 + 右侧滑出面板（与 QuickAdd 同一 .v2-panel 体系） -->
   <div class="v2-overlay" :class="{ show: visible }" @click="emit('close')" />
   <aside class="v2-panel" :class="{ show: visible }">
+    <button type="button" class="v2-sheet-handle" title="下拉收起" aria-label="下拉收起" />
     <div style="display:flex;align-items:center;gap:10px">
       <h2 style="font-size:19px;margin:0">编辑记录</h2>
     </div>
