@@ -1107,6 +1107,7 @@ html[data-style='hoos'] .v2-pagehead h1 { font-size: 24px; letter-spacing: 0; }
   z-index: 2400;
   display: flex;
   align-items: stretch;
+  box-sizing: border-box;
   height: 74px;
   padding: 8px 6px calc(8px + 0px);
   border-radius: 26px;
@@ -1170,7 +1171,7 @@ html[data-style='hoos'] .v2-pagehead h1 { font-size: 24px; letter-spacing: 0; }
 .v2-fab {
   position: absolute;
   left: 50%;
-  bottom: 22px;
+  bottom: 28px;
   transform: translateX(-50%);
   width: 58px;
   height: 58px;

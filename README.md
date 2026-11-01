@@ -32,17 +32,34 @@
 
 | 要求 | 说明 |
 |------|------|
-| Windows 10 / 11（64 位） | 仅支持 Windows 桌面端 |
+| Windows 10 / 11（64 位） | 桌面端；安卓端 APK 试用中（见下节） |
 | WebView2 运行时 | Win10/11 系统自带；若极少数机器启动报错，去 [微软官网](https://developer.microsoft.com/microsoft-edge/webview2/) 装一次即可 |
 | 磁盘空间 | 程序约 8MB，账本数据若干 MB |
 
 **三步上手：**
 
-1. 从 Releases 下载 `BillTrace_v0.4.0_x64.exe`（绿色版）或安装包 `setup.exe`；绿色版放到一个单独的文件夹里（比如 `D:\BillTrace\`）；
+1. 从 Releases 下载 `BillTrace_v0.5.0_x64.exe`（绿色版）或安装包 `setup.exe`；绿色版放到一个单独的文件夹里（比如 `D:\BillTrace\`）；
 2. 双击运行——它会在同目录生成 `data\` 文件夹存放账本（SQLite），**拷走整个文件夹 = 备份/迁移**；
 3. 首次使用建议顺序：**分类页 → 导入预设** 导入你的分类体系（md/txt）→ **设置 → 导入账单**（随手记 Excel 或微信流水 xlsx）→ 待确认商家归类向导自动弹出，确认一遍即可入库。
 
 不需要 Docker，不需要 PHP，不需要命令行——这是一个**桌面绿色软件**，不是网页应用。
+
+## 安卓版（APK · 构建试用中）
+
+> **状态：试用（Trial）**。功能与桌面端同源（同一套代码），移动端界面已按手机习惯重排（底部导航 + 悬浮记一笔按钮 + 底部抽屉），但尚未经过大规模真机验证，欢迎试用反馈问题。
+
+- **下载**：在 [Releases](https://github.com/Frostleaf0929/BillTrace/releases) 页面下载 `zhangji-0.5.0-arm64.apk`（约 11MB，适配 2020 年后的 arm64 手机），安装时允许"未知来源"即可（自用签名，不可上架商店）。
+- **数据与桌面端相互独立**：安卓端是独立的本地账本（各存各的），跨设备同步功能在规划中（WebDAV 备份优先）。
+- **已知限制**：①暂无平板专属布局（手机竖屏优先）；②文件导入依赖系统文件选择器，部分机型入口较深；③返回键行为、键盘避让等系统适配仍在打磨。
+
+**自行构建 APK（开发者）：**
+
+1. 按 `tools/mock/README.md` 与本节准备：JDK 17 + Android SDK/NDK + Rust 安卓目标（全部可装在独立目录，不污染系统；本仓库作者用的局部工具链布局见下）；
+2. 因链接器对中文路径敏感，工具链与构建产物建议放在**纯英文路径**下（本项目约定 `E:\<工具链目录>`，仓库内不存放任何工具链）；
+3. 项目根目录执行 `bash tools/android.sh release`——脚本自动完成：Rust 交叉编译 → 复制 .so 进安卓工程 → Gradle 打包 → 本地证书签名；
+4. 产物：`src-tauri/gen/android/app/build/outputs/apk/`。连手机后 `bash tools/android.sh install` 直接安装。
+
+> 说明：官方 `npm run tauri android build` 在本机因 Windows 软链接权限与中文路径问题不可用，`tools/android.sh` 是绕过这两点的替代打包流程；若你的环境开启了开发者模式且路径纯英文，可直接用官方命令。
 
 ## 核心功能
 
