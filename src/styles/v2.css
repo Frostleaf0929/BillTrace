@@ -1170,7 +1170,7 @@ html[data-style='hoos'] .v2-pagehead h1 { font-size: 24px; letter-spacing: 0; }
 .v2-fab {
   position: absolute;
   left: 50%;
-  bottom: -18px;
+  bottom: 22px;
   transform: translateX(-50%);
   width: 58px;
   height: 58px;
@@ -1253,3 +1253,34 @@ html.zj-mobile .v2-panel.show { transform: none; }
 .v2-head-gear:hover { background: var(--v2-surface-2); color: var(--v2-ink); }
 /* 移动端隐藏概览头部"记一笔"（与中央 FAB 重复） */
 html.zj-mobile .v2-pagehead .head-add { display: none; }
+
+/* ---- 移动端第二轮打磨（用户 2026-11-01 反馈） ---- */
+/* 卡片头部窄屏被挤成竖排标题：允许换行、标题禁断行 */
+html.zj-mobile .v2-card-head { flex-wrap: wrap; row-gap: 8px; }
+html.zj-mobile .v2-card-head h3 { white-space: nowrap; }
+/* 概览统计卡两列一行（span3 在桌面是 12 列中的 3 列，移动端改 6 列=半宽） */
+html.zj-mobile .v2-grid { gap: 12px; }
+html.zj-mobile .v2-grid .v2-stat-card.span3 { grid-column: span 6; }
+/* 跳转链接（查看全部/查看预算）改小按钮，保证触控面积 */
+html.zj-mobile .v2-link-btn {
+  padding: 7px 12px;
+  border: 1px solid var(--v2-line);
+  border-radius: 999px;
+  background: var(--v2-surface);
+  font-size: 12.5px;
+  gap: 5px;
+}
+html.zj-mobile .v2-link-btn:hover { opacity: 1; background: var(--v2-surface-2); }
+/* 转账两个账户字段并排 */
+.v2-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* 时间导航器把手：移动端扩大触控命中区（原 10px 远低于 44px 触控下限） */
+html.zj-mobile .v2-nav-handle { touch-action: none; }
+html.zj-mobile .v2-nav-handle::before {
+  content: '';
+  position: absolute;
+  inset: -16px -13px;
+}
+html.zj-mobile .v2-nav-win { touch-action: none; }
+/* 明细行金额禁止换行（长分类文字挤压时 -6.00 会断成两行） */
+.v2-t-amount { white-space: nowrap; }
+.v2-t-row { align-items: center; }

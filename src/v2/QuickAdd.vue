@@ -168,10 +168,16 @@ function onKey(e: KeyboardEvent): void {
       <VSelect v-if="l2Options.length" v-model="l2" :options="l2SelOpts" block />
     </template>
     <template v-else>
-      <div class="v2-field-label">从哪个账户转出</div>
-      <VSelect v-model="account" :options="accountOpts" block placeholder="选择转出账户" />
-      <div class="v2-field-label">转入哪个账户</div>
-      <VSelect v-model="accountTo" :options="transferInOpts" block placeholder="选择转入账户" />
+      <div class="v2-two-col">
+        <div>
+          <div class="v2-field-label">转出账户</div>
+          <VSelect v-model="account" :options="accountOpts" block placeholder="选择转出" />
+        </div>
+        <div>
+          <div class="v2-field-label">转入账户</div>
+          <VSelect v-model="accountTo" :options="transferInOpts" block placeholder="选择转入" />
+        </div>
+      </div>
     </template>
     <template v-if="type !== 'transfer'">
       <div class="v2-field-label">账户（{{ type === 'income' ? '转入' : '转出' }}）</div>
